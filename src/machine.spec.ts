@@ -24,6 +24,22 @@ describe("state machine", () => {
     expect(machine.initial!.history.map(toName)).toEqual(["1"]);
   });
 
+  it("initialises a simple machine with multiple conditions", () => {
+    const machine = makeMachine(
+      [
+        {
+          name: "1",
+          cond: ["yes", "pass"],
+        },
+      ],
+      void null,
+      { ...basicConditions, pass: () => true }
+    );
+
+    expect(machine.initial!.state.name).toEqual("1");
+    expect(machine.initial!.history.map(toName)).toEqual(["1"]);
+  });
+
   it("initialises to a deep state based on context", () => {
     const machine = makeMachine(
       [
@@ -147,6 +163,52 @@ describe("state machine", () => {
     const next = machine.execute(void null, "1/2");
     expect(next!.state.name).toEqual("1/2/1");
     expect(next!.history.map(toName)).toEqual(retainedHistory);
+  });
+
+  it("progresses through the entire history when current state is the first entry in the history", () => {
+    const machine = makeMachine(
+      [
+        {
+          name: "1",
+          cond: ["yes"],
+          states: [
+            { name: "1/1", cond: ["yes"] },
+            {
+              name: "1/2",
+              cond: ["yes"],
+              states: [
+                { name: "1/2/1", cond: ["yes"] },
+                { name: "1/2/2", cond: ["yes"] },
+                { name: "1/2/3", cond: ["no"] },
+              ],
+            },
+            { name: "1/3", cond: ["no"] },
+          ],
+        },
+      ],
+      void null,
+      basicConditions
+    );
+
+    const retainedHistory = ["1", "1/1", "1/2", "1/2/1", "1/2/2"];
+    expect(machine.initial!.state.name).toEqual("1/2/2");
+    expect(machine.initial!.history.map(toName)).toEqual(retainedHistory);
+
+    const first = machine.execute(void null, "1");
+    expect(first!.state.name).toEqual("1/1");
+    expect(first!.history.map(toName)).toEqual(retainedHistory);
+
+    const second = machine.execute(void null, "1/1");
+    expect(second!.state.name).toEqual("1/2");
+    expect(second!.history.map(toName)).toEqual(retainedHistory);
+
+    const third = machine.execute(void null, "1/2");
+    expect(third!.state.name).toEqual("1/2/1");
+    expect(third!.history.map(toName)).toEqual(retainedHistory);
+
+    const forth = machine.execute(void null, "1/2/1");
+    expect(forth!.state.name).toEqual("1/2/2");
+    expect(forth!.history.map(toName)).toEqual(retainedHistory);
   });
 
   it("doesn't progress through history when current state name is within history, but the context has changed the flow", () => {
