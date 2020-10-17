@@ -1,4 +1,4 @@
-type State<Context> = {
+export type State<Context> = {
   name: string;
   cond: (state: Context) => boolean;
   states?: State<Context>[];
@@ -17,20 +17,45 @@ export const makeMachine = <Context extends any>(
 
   const execute = (
     nextContext: Cx = context,
+    _currentStateName: string | undefined = undefined,
     _states: State<Cx>[] = states,
     _history: State<Cx>[] = []
   ): Er | undefined => {
-    return _states.reduce((prev: Er | undefined, state: State<Cx>) => {
-      if (state.cond(nextContext)) {
-        const prevHistory = prev ? prev.history : _history;
-        const history = [...prevHistory, state];
-        if (state.states) {
-          return execute(nextContext, state.states, history);
+    const executed = _states.reduce(
+      (prev: Er | undefined, state: State<Cx>) => {
+        if (state.cond(nextContext)) {
+          const prevHistory = prev ? prev.history : _history;
+          const history = [...prevHistory, state];
+          if (state.states) {
+            return execute(
+              nextContext,
+              _currentStateName,
+              state.states,
+              history
+            );
+          }
+          return { state, history };
         }
-        return { state, history };
-      }
-      return prev;
-    }, undefined);
+        return prev;
+      },
+      undefined
+    );
+    const ixCurState =
+      executed && _currentStateName
+        ? executed.history.findIndex(
+            (state) => state.name === _currentStateName
+          )
+        : -1;
+    if (ixCurState > -1) {
+      const nextStateInHistory =
+        executed && executed.history[ixCurState + 1]
+          ? executed.history[ixCurState + 1]
+          : undefined;
+      return executed
+        ? { ...executed, state: nextStateInHistory || executed.state }
+        : undefined;
+    }
+    return executed;
   };
 
   return {
