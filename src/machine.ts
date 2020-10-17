@@ -29,9 +29,8 @@ export const makeMachine = <
     nextContext: Cx = context,
     _currentStateName: string | undefined = undefined,
     _states: State<Cx, Cd>[] = states,
-    _history: State<Cx, Cd>[] = []
-  ): Er | undefined => {
-    const evaluatedConditions = Object.entries(conditions).reduce(
+    _history: State<Cx, Cd>[] = [],
+    _evaluatedConditions = Object.entries(conditions).reduce(
       (acc, [condition, fn]): Record<keyof Conditions, boolean> => {
         return {
           ...acc,
@@ -39,11 +38,12 @@ export const makeMachine = <
         };
       },
       {} as Record<keyof Conditions, boolean>
-    );
+    )
+  ): Er | undefined => {
     const executed = _states.reduce(
       (prev: Er | undefined, state: State<Cx, Cd>) => {
         const conditionPassed = state.cond.every(
-          (cond) => evaluatedConditions[cond]
+          (cond) => _evaluatedConditions[cond]
         );
         if (conditionPassed) {
           const prevHistory = prev ? prev.history : _history;
@@ -53,7 +53,8 @@ export const makeMachine = <
               nextContext,
               _currentStateName,
               state.states,
-              history
+              history,
+              _evaluatedConditions
             );
           }
           return { state, history };
