@@ -2,16 +2,22 @@ import { makeMachine, State } from "./machine";
 
 const cond = (val: boolean) => () => val;
 
+const basicConditions = {
+  yes: cond(true),
+  no: cond(false),
+};
+
 describe("state machine", () => {
   it("initialises a simple machine", () => {
     const machine = makeMachine(
       [
         {
           name: "1",
-          cond: cond(true),
+          cond: ["yes"],
         },
       ],
-      void null
+      void null,
+      basicConditions
     );
 
     expect(machine.initial!.state.name).toEqual("1");
@@ -23,30 +29,31 @@ describe("state machine", () => {
       [
         {
           name: "1",
-          cond: cond(true),
+          cond: ["yes"],
           states: [
             {
               name: "1/1",
-              cond: cond(true),
+              cond: ["yes"],
             },
-            { name: "1/2", cond: cond(false) },
+            { name: "1/2", cond: ["no"] },
             {
               name: "1/3",
-              cond: cond(true),
+              cond: ["yes"],
               states: [
-                { name: "1/3/1", cond: cond(true) },
-                { name: "1/3/2", cond: cond(false) },
-                { name: "1/3/3", cond: cond(true) },
+                { name: "1/3/1", cond: ["yes"] },
+                { name: "1/3/2", cond: ["no"] },
+                { name: "1/3/3", cond: ["yes"] },
               ],
             },
             {
               name: "1/4",
-              cond: cond(false),
+              cond: ["no"],
             },
           ],
         },
       ],
-      void null
+      void null,
+      basicConditions
     );
 
     expect(machine.initial!.state.name).toEqual("1/3/3");
@@ -64,16 +71,17 @@ describe("state machine", () => {
       [
         {
           name: "1",
-          cond: cond(true),
+          cond: ["yes"],
           states: [
-            { name: "1/1", cond: cond(true) },
-            { name: "1/2", cond: (pass) => pass },
-            { name: "1/3", cond: cond(false) },
+            { name: "1/1", cond: ["yes"] },
+            { name: "1/2", cond: ["evaluate"] },
+            { name: "1/3", cond: ["no"] },
           ],
         },
-        { name: "2", cond: cond(false) },
+        { name: "2", cond: ["no"] },
       ],
-      false
+      false,
+      { ...basicConditions, evaluate: (pass) => pass }
     );
     expect(machine.initial!.state.name).toEqual("1/1");
 
@@ -87,16 +95,17 @@ describe("state machine", () => {
       [
         {
           name: "1",
-          cond: cond(true),
+          cond: ["yes"],
           states: [
-            { name: "1/1", cond: cond(true) },
-            { name: "1/2", cond: (pass) => pass },
-            { name: "1/3", cond: cond(false) },
+            { name: "1/1", cond: ["yes"] },
+            { name: "1/2", cond: ["evaluate"] },
+            { name: "1/3", cond: ["no"] },
           ],
         },
-        { name: "2", cond: cond(false) },
+        { name: "2", cond: ["no"] },
       ],
-      true
+      true,
+      { ...basicConditions, evaluate: (pass) => pass }
     );
 
     expect(machine.initial!.state.name).toEqual("1/2");
@@ -112,23 +121,24 @@ describe("state machine", () => {
       [
         {
           name: "1",
-          cond: cond(true),
+          cond: ["yes"],
           states: [
-            { name: "1/1", cond: cond(true) },
+            { name: "1/1", cond: ["yes"] },
             {
               name: "1/2",
-              cond: cond(true),
+              cond: ["yes"],
               states: [
-                { name: "1/2/1", cond: cond(true) },
-                { name: "1/2/2", cond: cond(true) },
-                { name: "1/2/3", cond: cond(false) },
+                { name: "1/2/1", cond: ["yes"] },
+                { name: "1/2/2", cond: ["yes"] },
+                { name: "1/2/3", cond: ["no"] },
               ],
             },
-            { name: "1/3", cond: cond(false) },
+            { name: "1/3", cond: ["no"] },
           ],
         },
       ],
-      void null
+      void null,
+      basicConditions
     );
     const retainedHistory = ["1", "1/1", "1/2", "1/2/1", "1/2/2"];
     expect(machine.initial!.state.name).toEqual("1/2/2");
@@ -144,23 +154,28 @@ describe("state machine", () => {
       [
         {
           name: "1",
-          cond: cond(true),
+          cond: ["yes"],
           states: [
-            { name: "1/1", cond: cond(true) },
+            { name: "1/1", cond: ["yes"] },
             {
               name: "1/2",
-              cond: (pass) => pass,
+              cond: ["evaluate"],
               states: [
-                { name: "1/2/1", cond: cond(true) },
-                { name: "1/2/2", cond: cond(true) },
-                { name: "1/2/3", cond: cond(false) },
+                { name: "1/2/1", cond: ["yes"] },
+                { name: "1/2/2", cond: ["yes"] },
+                { name: "1/2/3", cond: ["no"] },
               ],
             },
-            { name: "1/3", cond: (pass) => !pass },
+            { name: "1/3", cond: ["evaluateInverse"] },
           ],
         },
       ],
-      true
+      true,
+      {
+        ...basicConditions,
+        evaluate: (pass) => pass,
+        evaluateInverse: (pass) => !pass,
+      }
     );
     expect(machine.initial!.state.name).toEqual("1/2/2");
     expect(machine.initial!.history.map(toName)).toEqual([
@@ -177,4 +192,4 @@ describe("state machine", () => {
   });
 });
 
-const toName = (state: State<any>) => state.name;
+const toName = (state: State<any, any>) => state.name;

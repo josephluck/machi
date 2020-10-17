@@ -1,29 +1,51 @@
-export type State<Context> = {
+export type State<
+  Context,
+  Conditions extends Record<string, Condition<Context>>
+> = {
   name: string;
-  cond: (state: Context) => boolean;
-  states?: State<Context>[];
+  cond: (keyof Conditions)[];
+  states?: State<Context, Conditions>[];
 };
 
-export const makeMachine = <Context extends any>(
-  states: State<Context>[],
-  context: Context
+type Condition<Context> = (context: Context) => boolean;
+
+export const makeMachine = <
+  Context extends any,
+  Conditions extends Record<string, Condition<Context>>
+>(
+  states: State<Context, Conditions>[],
+  context: Context,
+  conditions: Conditions
 ) => {
+  type Cd = Conditions;
   type Cx = Context;
   type ExecuteResult = {
-    state: State<Cx>;
-    history: State<Cx>[];
+    state: State<Cx, Cd>;
+    history: State<Cx, Cd>[];
   };
   type Er = ExecuteResult;
 
   const execute = (
     nextContext: Cx = context,
     _currentStateName: string | undefined = undefined,
-    _states: State<Cx>[] = states,
-    _history: State<Cx>[] = []
+    _states: State<Cx, Cd>[] = states,
+    _history: State<Cx, Cd>[] = []
   ): Er | undefined => {
+    const evaluatedConditions = Object.entries(conditions).reduce(
+      (acc, [condition, fn]): Record<keyof Conditions, boolean> => {
+        return {
+          ...acc,
+          [condition]: fn(nextContext),
+        };
+      },
+      {} as Record<keyof Conditions, boolean>
+    );
     const executed = _states.reduce(
-      (prev: Er | undefined, state: State<Cx>) => {
-        if (state.cond(nextContext)) {
+      (prev: Er | undefined, state: State<Cx, Cd>) => {
+        const conditionPassed = state.cond.every(
+          (cond) => evaluatedConditions[cond]
+        );
+        if (conditionPassed) {
           const prevHistory = prev ? prev.history : _history;
           const history = [...prevHistory, state];
           if (state.states) {
