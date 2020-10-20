@@ -2,28 +2,38 @@
  * An entry within the flow. An entry represents a single (potentially) terminal
  * node within the flow
  */
-export type Entry<Ctx, Conds extends Record<string, Condition<Ctx>>> = {
+export type Entry<
+  Context,
+  Conditions extends Record<string, Condition<Context>>
+> = {
+  /**
+   * Must be unique within the context of a machine
+   */
   name: string;
-  isDone: (keyof Conds)[];
+  isDone: (keyof Conditions)[];
 };
 
 /**
  * A decision in the flow. When all requirements return truthy, the fork's
  * states will be evaluated during execution.
  */
-export type Fork<Ctx, Conds extends Record<string, Condition<Ctx>>> = {
+export type Fork<
+  Context,
+  Conditions extends Record<string, Condition<Context>>
+> = {
   fork: string;
-  requirements: (keyof Conds)[];
-  states: State<Ctx, Conds>[];
+  requirements: (keyof Conditions)[];
+  states: State<Context, Conditions>[];
 };
 
 /**
  * A single Entry or Fork. The first Entry whose isDone is truthy will be the
  * terminal state in execution.
  */
-export type State<Ctx, Conds extends Record<string, Condition<Ctx>>> =
-  | Fork<Ctx, Conds>
-  | Entry<Ctx, Conds>;
+export type State<
+  Context,
+  Conditions extends Record<string, Condition<Context>>
+> = Fork<Context, Conditions> | Entry<Context, Conditions>;
 
 /**
  * A predicate based on the machine's context
@@ -49,24 +59,26 @@ export const makeMachine = <
   /**
    * The condition functions (used by states) of the machine. States in the
    * machine can refer to condition functions by their key in this object as
-   * entry requirements for the state.
+   * entry requirements for a fork or as "done" identifiers for an entry.
    */
   conditions: Conditions
 ) => {
   type ConditionsResult = Record<keyof Conditions, boolean>;
+
   type ExecuteResult = {
     entry: Entry<Context, Conditions>;
     history: Entry<Context, Conditions>[];
   };
+
   type InternalExecuteResult = ExecuteResult & {
     entryInHistory: Entry<Context, Conditions> | undefined;
   };
 
   const evaluateConditions = (context: Context) =>
     Object.entries(conditions).reduce(
-      (acc, [c, name]): ConditionsResult => ({
+      (acc, [c, fn]): ConditionsResult => ({
         ...acc,
-        [c]: name(context),
+        [c]: fn(context),
       }),
       {} as ConditionsResult
     );
@@ -95,10 +107,7 @@ export const makeMachine = <
     _entryInHistory: Entry<Context, Conditions> | undefined = undefined
   ): InternalExecuteResult | undefined => {
     const result = _states.reduce((entryFoundInCurrentLevel, state) => {
-      if (
-        isFork<Context, Conditions>(state) &&
-        state.requirements.every((name) => _evaluatedConditions[name])
-      ) {
+      if (isForkEntered(state, _evaluatedConditions)) {
         return process(
           context,
           currentEntryName,
@@ -124,25 +133,17 @@ export const makeMachine = <
         return entryFoundInCurrentLevel;
       }
 
-      if (
-        isEntry<Context, Conditions>(state) &&
-        state.isDone.every((name) => _evaluatedConditions[name])
-      ) {
+      if (isEntryDone(state, _evaluatedConditions)) {
         _history.push(state);
       }
 
-      if (
-        isEntry<Context, Conditions>(state) &&
-        state.isDone.some((name) => !_evaluatedConditions[name])
-      ) {
+      if (isEntryNext(state, _evaluatedConditions)) {
         return {
           entry: state,
           history: _history,
           entryInHistory: _entryInHistory,
         };
       }
-
-      return undefined;
     }, undefined as InternalExecuteResult | undefined);
 
     return result;
@@ -198,3 +199,46 @@ const isEntry = <
 >(
   state: State<Context, Conditions>
 ): state is Entry<Context, Conditions> => !isFork(state);
+
+/**
+ * Returns a boolean representing whether the provided state is a fork and
+ * whether it should be executed according to the current context.
+ */
+const isForkEntered = <
+  Context extends any,
+  Conditions extends Record<string, Condition<Context>>
+>(
+  state: State<Context, Conditions>,
+  evaluatedConditions: Record<keyof Conditions, boolean>
+): state is Fork<Context, Conditions> =>
+  isFork<Context, Conditions>(state) &&
+  state.requirements.every((name) => evaluatedConditions[name]);
+
+/**
+ * Returns a boolean representing whether the provided state is an entry state
+ * and whether it is considered to be "done" according to the current context.
+ */
+const isEntryDone = <
+  Context extends any,
+  Conditions extends Record<string, Condition<Context>>
+>(
+  state: State<Context, Conditions>,
+  evaluatedConditions: Record<keyof Conditions, boolean>
+): state is Entry<Context, Conditions> =>
+  isEntry<Context, Conditions>(state) &&
+  state.isDone.every((name) => evaluatedConditions[name]);
+
+/**
+ * Returns a boolean representing whether the provided state is an entry state
+ * and whether it is considered to be the next entry according to the current
+ * context.
+ */
+const isEntryNext = <
+  Context extends any,
+  Conditions extends Record<string, Condition<Context>>
+>(
+  state: State<Context, Conditions>,
+  evaluatedConditions: Record<keyof Conditions, boolean>
+): state is Entry<Context, Conditions> =>
+  isEntry<Context, Conditions>(state) &&
+  state.isDone.some((name) => !evaluatedConditions[name]);
