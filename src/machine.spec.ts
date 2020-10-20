@@ -373,7 +373,7 @@ describe("free beer example", () => {
             requirements: ["isRich"],
             states: [
               {
-                name: "Sorry, you earn too much money for free beer",
+                name: "Sorry, you're to rich for free beer",
                 isDone: ["no"],
               },
             ],
@@ -479,6 +479,101 @@ describe("free beer example", () => {
       "What's your address?",
     ]);
     expect(result!.entry.name).toEqual("What's your job title?");
+  });
+
+  it("asks for the applicant's salary", () => {
+    const result = machine.execute({
+      ...initialContext,
+      age: 22,
+      name: "Sarah",
+      address: "31 The Street",
+      jobTitle: "Waiter",
+    });
+    expect(result!.history.map(toName)).toEqual([
+      "How old are you?",
+      "What's your name?",
+      "What's your postcode?",
+      "What's your job title?",
+    ]);
+    expect(result!.entry.name).toEqual("What's your salary?");
+  });
+
+  it("tells the applicant they're too rich", () => {
+    const result = machine.execute({
+      ...initialContext,
+      age: 22,
+      name: "Sarah",
+      address: "31 The Street",
+      jobTitle: "Lawyer",
+      salary: 240000,
+    });
+    expect(result!.history.map(toName)).toEqual([
+      "How old are you?",
+      "What's your name?",
+      "What's your postcode?",
+      "What's your job title?",
+      "What's your salary?",
+    ]);
+    expect(result!.entry.name).toEqual("Sorry, you're to rich for free beer");
+  });
+
+  it("gives the applicant free beer", () => {
+    const result = machine.execute({
+      ...initialContext,
+      age: 22,
+      name: "Sarah",
+      address: "31 The Street",
+      jobTitle: "Bartender",
+      salary: 20000,
+    });
+    expect(result!.history.map(toName)).toEqual([
+      "How old are you?",
+      "What's your name?",
+      "What's your postcode?",
+      "What's your job title?",
+      "What's your salary?",
+    ]);
+    expect(result!.entry.name).toEqual("Yay! You can have free beer");
+  });
+
+  it("progresses through history from start to finish", () => {
+    const ctx = {
+      ...initialContext,
+      age: 22,
+      name: "Sarah",
+      address: "31 The Street",
+      jobTitle: "Bartender",
+      salary: 20000,
+    };
+    const history = [
+      "How old are you?",
+      "What's your name?",
+      "What's your postcode?",
+      "What's your job title?",
+      "What's your salary?",
+    ];
+    history.forEach((item, i) => {
+      const result = machine.execute(ctx, item);
+      if (i === history.length - 1) {
+        expect(result!.entry.name).toEqual("Yay! You can have free beer");
+      } else {
+        expect(result!.entry.name).toEqual(history[i + 1]);
+      }
+      expect(result!.history.map(toName)).toEqual(history);
+    });
+  });
+
+  it("switches back to an alternate journey when the applicant goes back and changes their answer", () => {
+    const ctx = {
+      ...initialContext,
+      age: 22,
+      name: "Sarah",
+      address: "31 The Street",
+      jobTitle: "Bartender",
+    };
+    const result = machine.execute({ ...ctx, age: 10 }, "What's your salary?");
+    expect(result!.entry.name).toEqual("Sorry, you're too young for free beer");
+    expect(result!.history.map(toName)).toEqual(["How old are you?"]);
   });
 });
 
