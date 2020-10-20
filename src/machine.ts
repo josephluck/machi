@@ -36,17 +36,16 @@ export type Condition<Context> = (context: Context) => boolean;
  * context.
  */
 export const makeMachine = <
-  Context extends any,
-  Conditions extends Record<string, Condition<Context>>
+  Context extends any = void,
+  Conditions extends Record<string, Condition<Context>> = Record<
+    string,
+    Condition<Context>
+  >
 >(
   /**
    * The states in the machine.
    */
   states: State<Context, Conditions>[],
-  /**
-   * The initial context of the machine.
-   */
-  initialContext: Context,
   /**
    * The condition functions (used by states) of the machine. States in the
    * machine can refer to condition functions by their key in this object as
@@ -73,7 +72,7 @@ export const makeMachine = <
     );
 
   const process = (
-    context: Context = initialContext,
+    context: Context,
     currentEntryName: string | undefined = undefined,
     /**
      * INTERNAL USE ONLY
@@ -160,7 +159,7 @@ export const makeMachine = <
      * The next machine context. Passed to conditions to evaluate traversal
      * through the states in the machine.
      */
-    context: Context = initialContext,
+    context: Context,
     /**
      * Used to determine whether to preserve the history and navigate to the
      * next entry. Used when the current state is somewhere back in the history

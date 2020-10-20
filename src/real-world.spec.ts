@@ -1,5 +1,4 @@
 import { makeMachine, Entry } from "./machine";
-import { exec } from "child_process";
 
 describe("free beer example", () => {
   type Context = {
@@ -13,7 +12,7 @@ describe("free beer example", () => {
   const initialContext: Context = {
     bypassPostcodeLookup: false,
   };
-  const execute = makeMachine(
+  const execute = makeMachine<Context>(
     [
       {
         name: "How old are you?",
@@ -58,7 +57,6 @@ describe("free beer example", () => {
         ],
       },
     ],
-    initialContext,
     {
       no: () => false,
       hasEnteredAge: (ctx) => !!ctx.age,
@@ -75,7 +73,7 @@ describe("free beer example", () => {
   );
 
   it("initialises", () => {
-    const result = execute();
+    const result = execute(initialContext);
     expect(result!.entry.name).toEqual("How old are you?");
   });
 
@@ -241,7 +239,8 @@ describe("free beer example", () => {
       address: "31 The Street",
       jobTitle: "Bartender",
     };
-    const result = execute({ ...ctx, age: 10 }, "What's your salary?");
+    const initial = execute(ctx);
+    const result = execute({ ...ctx, age: 10 }, initial!.entry.name);
     expect(result!.entry.name).toEqual("Sorry, you're too young for free beer");
     expect(result!.history.map(toName)).toEqual(["How old are you?"]);
   });

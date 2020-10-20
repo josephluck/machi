@@ -1,5 +1,4 @@
 import { makeMachine, Entry } from "./machine";
-import { exec } from "child_process";
 
 describe("state machine", () => {
   it("initialises a simple machine", () => {
@@ -10,7 +9,6 @@ describe("state machine", () => {
           isDone: ["no"],
         },
       ],
-      void null,
       basicConditions
     );
 
@@ -27,7 +25,6 @@ describe("state machine", () => {
           isDone: ["yes", "overrideWithNo"],
         },
       ],
-      void null,
       { ...basicConditions, overrideWithNo: () => false }
     );
 
@@ -57,7 +54,6 @@ describe("state machine", () => {
           isDone: ["no"],
         },
       ],
-      void null,
       basicConditions
     );
 
@@ -103,7 +99,6 @@ describe("state machine", () => {
           ],
         },
       ],
-      void null,
       basicConditions
     );
 
@@ -144,7 +139,6 @@ describe("state machine", () => {
           ],
         },
       ],
-      void null,
       basicConditions
     );
 
@@ -205,7 +199,6 @@ describe("state machine", () => {
           ],
         },
       ],
-      void null,
       basicConditions
     );
 
@@ -216,7 +209,7 @@ describe("state machine", () => {
   });
 
   it("correctly determines next state and history when machine context is updated", () => {
-    const execute = makeMachine(
+    const execute = makeMachine<boolean>(
       [
         {
           fork: "Is Yes",
@@ -229,11 +222,10 @@ describe("state machine", () => {
         },
         { name: "4", isDone: ["no"] },
       ],
-      false,
       { ...basicConditions, maybe: (isYes) => isYes }
     );
 
-    const result = execute();
+    const result = execute(false);
 
     expect(result!.entry.name).toEqual("2");
     expect(result!.history.map(toName)).toEqual(["1"]);
@@ -244,7 +236,7 @@ describe("state machine", () => {
   });
 
   it("correctly goes back to previous state when the machines context is updated", () => {
-    const execute = makeMachine(
+    const execute = makeMachine<boolean>(
       [
         {
           fork: "Is Yes",
@@ -257,11 +249,10 @@ describe("state machine", () => {
         },
         { name: "4", isDone: ["no"] },
       ],
-      true,
       { ...basicConditions, maybe: (isYes) => isYes }
     );
 
-    const result = execute();
+    const result = execute(true);
 
     expect(result!.entry.name).toEqual("3");
     expect(result!.history.map(toName)).toEqual(["1", "2"]);
@@ -292,7 +283,6 @@ describe("state machine", () => {
           ],
         },
       ],
-      void null,
       basicConditions
     );
 
@@ -308,7 +298,7 @@ describe("state machine", () => {
   });
 
   it("doesn't progress through history when current state name is within history, but the context has changed the flow", () => {
-    const execute = makeMachine(
+    const execute = makeMachine<boolean>(
       [
         {
           fork: "Is Yes",
@@ -328,11 +318,10 @@ describe("state machine", () => {
           ],
         },
       ],
-      true,
       { ...basicConditions, maybe: (isYes) => isYes }
     );
 
-    const result = execute();
+    const result = execute(true);
 
     const retainedHistory = ["1", "2", "3"];
     expect(result!.entry.name).toEqual("4");
