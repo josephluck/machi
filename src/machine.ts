@@ -46,7 +46,7 @@ export const makeMachine = <
   /**
    * The initial context of the machine.
    */
-  context: Context,
+  initialContext: Context,
   /**
    * The condition functions (used by states) of the machine. States in the
    * machine can refer to condition functions by their key in this object as
@@ -54,65 +54,55 @@ export const makeMachine = <
    */
   conditions: Conditions
 ) => {
-  type Cd = Conditions;
   type ConditionsResult = Record<keyof Conditions, boolean>;
-  type CdR = ConditionsResult;
-  type Cx = Context;
   type ExecuteResult = {
-    entry: Entry<Cx, Cd>;
-    history: Entry<Cx, Cd>[];
+    entry: Entry<Context, Conditions>;
+    history: Entry<Context, Conditions>[];
   };
-  type Er = ExecuteResult;
+  type InternalExecuteResult = ExecuteResult & {
+    entryInHistory: Entry<Context, Conditions> | undefined;
+  };
 
-  const evaluateConditions = (nextContext: Cx) =>
+  const evaluateConditions = (context: Context) =>
     Object.entries(conditions).reduce(
-      (acc, [c, cond]): CdR => ({
+      (acc, [c, name]): ConditionsResult => ({
         ...acc,
-        [c]: cond(nextContext),
+        [c]: name(context),
       }),
-      {} as CdR
+      {} as ConditionsResult
     );
 
   const process = (
-    nextContext: Cx = context,
-    currentStateName: string | undefined = undefined,
+    context: Context = initialContext,
+    currentEntryName: string | undefined = undefined,
     /**
      * INTERNAL USE ONLY
      * The states to evaluate. Used when recursing over states in the machine.
      */
-    _states: State<Cx, Cd>[] = states,
+    _states: State<Context, Conditions>[] = states,
     /**
      * INTERNAL USE ONLY
      * Used when recursing over states whose conditions return truthy (aka the
      * states that have been "visited" on the way to the final state) to build
      * up the pathway of visited states during execution.
      */
-    _history: Entry<Cx, Cd>[] = [],
+    _history: Entry<Context, Conditions>[] = [],
     /**
      * INTERNAL USE ONLY
      * Used as a cache of the condition results based on the next context so
      * that the conditions aren't re-evaluated during recursion.
      */
-    _evaluatedConditions = evaluateConditions(nextContext),
-    _entryInHistory: Entry<Cx, Cd> | undefined = undefined
-  ): (Er & { entryInHistory: Entry<Cx, Cd> | undefined }) | undefined => {
-    const result = _states.reduce((prev, state) => {
-      const pushEntryToHistory = () => {
-        if (
-          isEntry<Cx, Cd>(state) &&
-          state.isDone.every((cond) => _evaluatedConditions[cond])
-        ) {
-          _history.push(state);
-        }
-      };
-
+    _evaluatedConditions = evaluateConditions(context),
+    _entryInHistory: Entry<Context, Conditions> | undefined = undefined
+  ): InternalExecuteResult | undefined => {
+    const result = _states.reduce((entryFoundInCurrentLevel, state) => {
       if (
-        isFork<Cx, Cd>(state) &&
-        state.requirements.every((cond) => _evaluatedConditions[cond])
+        isFork<Context, Conditions>(state) &&
+        state.requirements.every((name) => _evaluatedConditions[name])
       ) {
         return process(
-          nextContext,
-          currentStateName,
+          context,
+          currentEntryName,
           state.states,
           _history,
           _evaluatedConditions,
@@ -120,25 +110,31 @@ export const makeMachine = <
         );
       }
 
-      // Found path
-      if (prev) {
-        if (currentStateName && _history.length) {
+      if (entryFoundInCurrentLevel) {
+        if (currentEntryName && _history.length) {
           const nextIndexInHistory = _history.findIndex(
-            (entry) => entry.name === currentStateName
+            (entry) => entry.name === currentEntryName
           );
           const entryInHistory = _history[nextIndexInHistory + 1];
 
-          return entryInHistory ? { ...prev, entryInHistory } : prev;
+          return entryInHistory
+            ? { ...entryFoundInCurrentLevel, entryInHistory }
+            : entryFoundInCurrentLevel;
         }
 
-        return prev;
+        return entryFoundInCurrentLevel;
       }
 
-      pushEntryToHistory();
+      if (
+        isEntry<Context, Conditions>(state) &&
+        state.isDone.every((name) => _evaluatedConditions[name])
+      ) {
+        _history.push(state);
+      }
 
       if (
-        isEntry<Cx, Cd>(state) &&
-        state.isDone.some((cond) => !_evaluatedConditions[cond])
+        isEntry<Context, Conditions>(state) &&
+        state.isDone.some((name) => !_evaluatedConditions[name])
       ) {
         return {
           entry: state,
@@ -148,16 +144,23 @@ export const makeMachine = <
       }
 
       return undefined;
-    }, undefined as (Er & { entryInHistory: Entry<Cx, Cd> | undefined }) | undefined);
+    }, undefined as InternalExecuteResult | undefined);
 
     return result;
   };
 
+  /**
+   * Evaluate the next context in the machine given a new state.
+   *
+   * Provide a current entry name to return the entry immediately after the
+   * provided entry in the history stack.
+   */
   const execute = (
     /**
-     * The next machine context. Passed to conditions
+     * The next machine context. Passed to conditions to evaluate traversal
+     * through the states in the machine.
      */
-    nextContext: Cx = context,
+    context: Context = initialContext,
     /**
      * Used to determine whether to preserve the history and navigate to the
      * next entry. Used when the current state is somewhere back in the history
@@ -166,96 +169,20 @@ export const makeMachine = <
      * the same order as they went back, unless they end up changing state entry
      * requirements via data-driven conditions).
      */
-    currentStateName: string | undefined = undefined
-  ): Er | undefined => {
-    const result = process(nextContext, currentStateName);
+    currentEntryName: string | undefined = undefined
+  ): ExecuteResult | undefined => {
+    const result = process(context, currentEntryName);
 
     if (!result) {
       return;
     }
 
-    const { entry, history, entryInHistory } = result;
+    const { entry, entryInHistory, ...rest } = result;
 
-    return { entry: entryInHistory || entry, history };
+    return { ...rest, entry: entryInHistory || entry };
   };
 
-  // const execute = (
-  //   /**
-  //    * The next machine context. Passed to conditions
-  //    */
-  //   nextContext: Cx = context,
-  //   /**
-  //    * Used to determine whether to preserve the history and navigate to the
-  //    * next entry. Used when the current state is somewhere back in the history
-  //    * stack. For example, the user has navigated back to an earlier point in
-  //    * a navigation flow and is updating information (they should go forwards in
-  //    * the same order as they went back, unless they end up changing state entry
-  //    * requirements via data-driven conditions).
-  //    */
-  //   currentStateName: string | undefined = undefined,
-  //   /**
-  //    * INTERNAL USE ONLY
-  //    * The states to evaluate. Used when recursing over states in the machine.
-  //    */
-  //   _states: State<Cx, Cd>[] = states,
-  //   /**
-  //    * INTERNAL USE ONLY
-  //    * Used when recursing over states whose conditions return truthy (aka the
-  //    * states that have been "visited" on the way to the final state) to build
-  //    * up the pathway of visited states during execution.
-  //    */
-  //   _history: State<Cx, Cd>[] = [],
-  //   /**
-  //    * INTERNAL USE ONLY
-  //    * Used as a cache of the condition results based on the next context so
-  //    * that the conditions aren't re-evaluated during recursion.
-  //    */
-  //   _evaluatedConditions = evaluateConditions(nextContext)
-  // ): Er | undefined => {
-  //   const executed = _states.reduce(
-  //     (prev: Er | undefined, state: State<Cx, Cd>) => {
-  //       const conditionPassed = state.cond.every(
-  //         (cond) => _evaluatedConditions[cond]
-  //       );
-  //       if (conditionPassed) {
-  //         const prevHistory = prev ? prev.history : _history;
-  //         const history = [...prevHistory, state];
-  //         if (state.states) {
-  //           return execute(
-  //             nextContext,
-  //             currentStateName,
-  //             state.states,
-  //             history,
-  //             _evaluatedConditions
-  //           );
-  //         }
-  //         return { entry: state, history };
-  //       }
-  //       return prev;
-  //     },
-  //     undefined
-  //   );
-
-  //   const ixCurState =
-  //     executed && currentStateName
-  //       ? executed.history.findIndex((state) => state.name === currentStateName)
-  //       : -1;
-  //   if (ixCurState > -1) {
-  //     const nextEntry =
-  //       executed && executed.history[ixCurState + 1]
-  //         ? executed.history[ixCurState + 1]
-  //         : undefined;
-  //     return executed
-  //       ? { ...executed, entry: nextEntry || executed.entry }
-  //       : undefined;
-  //   }
-  //   return executed;
-  // };
-
-  return {
-    execute,
-    initial: execute(context),
-  };
+  return execute;
 };
 
 const isFork = <

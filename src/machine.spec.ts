@@ -1,8 +1,9 @@
 import { makeMachine, Entry } from "./machine";
+import { exec } from "child_process";
 
 describe("state machine", () => {
   it("initialises a simple machine", () => {
-    const machine = makeMachine(
+    const execute = makeMachine(
       [
         {
           name: "1",
@@ -13,12 +14,13 @@ describe("state machine", () => {
       basicConditions
     );
 
-    expect(machine.initial!.entry.name).toEqual("1");
-    expect(machine.initial!.history.map(toName)).toEqual([]);
+    const result = execute();
+    expect(result!.entry.name).toEqual("1");
+    expect(result!.history.map(toName)).toEqual([]);
   });
 
   it("initialises a simple machine with multiple conditions", () => {
-    const machine = makeMachine(
+    const execute = makeMachine(
       [
         {
           name: "1",
@@ -29,12 +31,14 @@ describe("state machine", () => {
       { ...basicConditions, overrideWithNo: () => false }
     );
 
-    expect(machine.initial!.entry.name).toEqual("1");
-    expect(machine.initial!.history.map(toName)).toEqual([]);
+    const result = execute();
+
+    expect(result!.entry.name).toEqual("1");
+    expect(result!.history.map(toName)).toEqual([]);
   });
 
   it("builds up history from a simple machine", () => {
-    const machine = makeMachine(
+    const execute = makeMachine(
       [
         {
           name: "1",
@@ -56,12 +60,15 @@ describe("state machine", () => {
       void null,
       basicConditions
     );
-    expect(machine.initial!.entry.name).toEqual("4");
-    expect(machine.initial!.history.map(toName)).toEqual(["1", "2", "3"]);
+
+    const result = execute();
+
+    expect(result!.entry.name).toEqual("4");
+    expect(result!.history.map(toName)).toEqual(["1", "2", "3"]);
   });
 
   it("initialises to a deep state based on context", () => {
-    const machine = makeMachine(
+    const execute = makeMachine(
       [
         {
           fork: "Is Yes",
@@ -100,12 +107,14 @@ describe("state machine", () => {
       basicConditions
     );
 
-    expect(machine.initial!.entry.name).toEqual("4");
-    expect(machine.initial!.history.map(toName)).toEqual(["1", "2"]);
+    const result = execute();
+
+    expect(result!.entry.name).toEqual("4");
+    expect(result!.history.map(toName)).toEqual(["1", "2"]);
   });
 
   it("skips over a fork if all it's entries are done", () => {
-    const machine = makeMachine(
+    const execute = makeMachine(
       [
         {
           fork: "Is Yes",
@@ -139,18 +148,14 @@ describe("state machine", () => {
       basicConditions
     );
 
-    expect(machine.initial!.entry.name).toEqual("6");
-    expect(machine.initial!.history.map(toName)).toEqual([
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-    ]);
+    const result = execute();
+
+    expect(result!.entry.name).toEqual("6");
+    expect(result!.history.map(toName)).toEqual(["1", "2", "3", "4", "5"]);
   });
 
   it("enters the correct fork if there are multiple competing forks", () => {
-    const machine = makeMachine(
+    const execute = makeMachine(
       [
         {
           fork: "Is No",
@@ -204,18 +209,14 @@ describe("state machine", () => {
       basicConditions
     );
 
-    expect(machine.initial!.entry.name).toEqual("7");
-    expect(machine.initial!.history.map(toName)).toEqual([
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-    ]);
+    const result = execute();
+
+    expect(result!.entry.name).toEqual("7");
+    expect(result!.history.map(toName)).toEqual(["2", "3", "4", "5", "6"]);
   });
 
   it("correctly determines next state and history when machine context is updated", () => {
-    const machine = makeMachine(
+    const execute = makeMachine(
       [
         {
           fork: "Is Yes",
@@ -231,16 +232,19 @@ describe("state machine", () => {
       false,
       { ...basicConditions, maybe: (isYes) => isYes }
     );
-    expect(machine.initial!.entry.name).toEqual("2");
-    expect(machine.initial!.history.map(toName)).toEqual(["1"]);
 
-    const next = machine.execute(true);
+    const result = execute();
+
+    expect(result!.entry.name).toEqual("2");
+    expect(result!.history.map(toName)).toEqual(["1"]);
+
+    const next = execute(true);
     expect(next!.entry.name).toEqual("3");
     expect(next!.history.map(toName)).toEqual(["1", "2"]);
   });
 
   it("correctly goes back to previous state when the machines context is updated", () => {
-    const machine = makeMachine(
+    const execute = makeMachine(
       [
         {
           fork: "Is Yes",
@@ -256,16 +260,19 @@ describe("state machine", () => {
       true,
       { ...basicConditions, maybe: (isYes) => isYes }
     );
-    expect(machine.initial!.entry.name).toEqual("3");
-    expect(machine.initial!.history.map(toName)).toEqual(["1", "2"]);
 
-    const next = machine.execute(false);
+    const result = execute();
+
+    expect(result!.entry.name).toEqual("3");
+    expect(result!.history.map(toName)).toEqual(["1", "2"]);
+
+    const next = execute(false);
     expect(next!.entry.name).toEqual("2");
     expect(next!.history.map(toName)).toEqual(["1"]);
   });
 
   it("progresses through history consecutively when current state name is within history", () => {
-    const machine = makeMachine(
+    const execute = makeMachine(
       [
         {
           fork: "Is Yes",
@@ -288,17 +295,20 @@ describe("state machine", () => {
       void null,
       basicConditions
     );
-    const retainedHistory = ["1", "2", "3"];
-    expect(machine.initial!.entry.name).toEqual("4");
-    expect(machine.initial!.history.map(toName)).toEqual(retainedHistory);
 
-    const next = machine.execute(void null, "2");
+    const result = execute();
+
+    const retainedHistory = ["1", "2", "3"];
+    expect(result!.entry.name).toEqual("4");
+    expect(result!.history.map(toName)).toEqual(retainedHistory);
+
+    const next = execute(void null, "2");
     expect(next!.entry.name).toEqual("3");
     expect(next!.history.map(toName)).toEqual(retainedHistory);
   });
 
   it("doesn't progress through history when current state name is within history, but the context has changed the flow", () => {
-    const machine = makeMachine(
+    const execute = makeMachine(
       [
         {
           fork: "Is Yes",
@@ -321,259 +331,17 @@ describe("state machine", () => {
       true,
       { ...basicConditions, maybe: (isYes) => isYes }
     );
-    const retainedHistory = ["1", "2", "3"];
-    expect(machine.initial!.entry.name).toEqual("4");
-    expect(machine.initial!.history.map(toName)).toEqual(retainedHistory);
 
-    const next = machine.execute(false, "1");
+    const result = execute();
+
+    const retainedHistory = ["1", "2", "3"];
+    expect(result!.entry.name).toEqual("4");
+    expect(result!.history.map(toName)).toEqual(retainedHistory);
+
+    const next = execute(false, "1");
     expect(next!.entry.name).toEqual("5");
     expect(next!.history.map(toName)).not.toEqual(retainedHistory);
     expect(next!.history.map(toName)).toEqual(["1"]);
-  });
-});
-
-describe("free beer example", () => {
-  type Context = {
-    age?: number;
-    name?: string;
-    address?: string;
-    jobTitle?: string;
-    salary?: number;
-    bypassPostcodeLookup: boolean;
-  };
-  const initialContext: Context = {
-    bypassPostcodeLookup: false,
-  };
-  const machine = makeMachine(
-    [
-      {
-        name: "How old are you?",
-        isDone: ["hasEnteredAge"],
-      },
-      {
-        fork: "Is old enough",
-        requirements: ["isOfLegalDrinkingAge"],
-        states: [
-          { name: "What's your name?", isDone: ["hasEnteredName"] },
-          { name: "What's your postcode?", isDone: ["hasEnteredAddress"] },
-          {
-            fork: "Bypassed postcode lookup",
-            requirements: ["hasBypassedPostcodeLookup"],
-            states: [
-              {
-                name: "What's your address?",
-                isDone: ["hasEnteredAddress"],
-              },
-            ],
-          },
-          { name: "What's your job title?", isDone: ["hasEnteredJobTitle"] },
-          { name: "What's your salary?", isDone: ["hasEnteredSalary"] },
-          {
-            fork: "If you're rich?",
-            requirements: ["isRich"],
-            states: [
-              {
-                name: "Sorry, you're to rich for free beer",
-                isDone: ["no"],
-              },
-            ],
-          },
-          { name: "Yay! You can have free beer", isDone: ["no"] },
-        ],
-      },
-      {
-        fork: "Is too young",
-        requirements: ["isTooYoung"],
-        states: [
-          { name: "Sorry, you're too young for free beer", isDone: ["no"] },
-        ],
-      },
-    ],
-    initialContext,
-    {
-      no: () => false,
-      hasEnteredAge: (ctx) => !!ctx.age,
-      hasEnteredName: (ctx) => !!ctx.name && ctx.name.length > 0,
-      hasEnteredAddress: (ctx) => !!ctx.address,
-      hasEnteredJobTitle: (ctx) => !!ctx.jobTitle,
-      hasEnteredSalary: (ctx) => !!ctx.salary,
-      isOfLegalDrinkingAge: (ctx) => !!ctx.age && ctx.age >= 18,
-      isTooYoung: (ctx) => !!ctx.age && ctx.age < 18,
-      isRich: (ctx) => !!ctx.salary && ctx.salary > 100000,
-      isEligible: (ctx) => !!ctx.salary && ctx.salary > 100000,
-      hasBypassedPostcodeLookup: (ctx) => ctx.bypassPostcodeLookup,
-    }
-  );
-
-  it("initialises", () => {
-    expect(machine.initial!.entry.name).toEqual("How old are you?");
-  });
-
-  it("exits early if the applicant is too young", () => {
-    const result = machine.execute({ ...initialContext, age: 16 });
-    expect(result!.history.map(toName)).toEqual(["How old are you?"]);
-    expect(result!.entry.name).toEqual("Sorry, you're too young for free beer");
-  });
-
-  it("asks for the applicants name", () => {
-    const result = machine.execute({ ...initialContext, age: 22 });
-    expect(result!.history.map(toName)).toEqual(["How old are you?"]);
-    expect(result!.entry.name).toEqual("What's your name?");
-  });
-
-  it("asks for the applicants postcode", () => {
-    const result = machine.execute({
-      ...initialContext,
-      age: 22,
-      name: "Sarah",
-    });
-    expect(result!.history.map(toName)).toEqual([
-      "How old are you?",
-      "What's your name?",
-    ]);
-    expect(result!.entry.name).toEqual("What's your postcode?");
-  });
-
-  it("skips over the address section if the postcode lookup was used to enter the address", () => {
-    const result = machine.execute({
-      ...initialContext,
-      age: 22,
-      name: "Sarah",
-      address: "31 The Street",
-    });
-    expect(result!.history.map(toName)).toEqual([
-      "How old are you?",
-      "What's your name?",
-      "What's your postcode?",
-    ]);
-    expect(result!.entry.name).toEqual("What's your job title?");
-  });
-
-  it("asks for the applicant's address section if the postcode lookup was bypassed", () => {
-    const result = machine.execute({
-      ...initialContext,
-      age: 22,
-      name: "Sarah",
-      bypassPostcodeLookup: true,
-    });
-    expect(result!.history.map(toName)).toEqual([
-      "How old are you?",
-      "What's your name?",
-      // TODO: should postcode be here?
-    ]);
-    expect(result!.entry.name).toEqual("What's your address?");
-  });
-
-  it("progresses after bypassing postcode lookup and entering address", () => {
-    const result = machine.execute({
-      ...initialContext,
-      age: 22,
-      name: "Sarah",
-      bypassPostcodeLookup: true,
-      address: "31 The Street",
-    });
-    expect(result!.history.map(toName)).toEqual([
-      "How old are you?",
-      "What's your name?",
-      "What's your postcode?",
-      "What's your address?",
-    ]);
-    expect(result!.entry.name).toEqual("What's your job title?");
-  });
-
-  it("asks for the applicant's salary", () => {
-    const result = machine.execute({
-      ...initialContext,
-      age: 22,
-      name: "Sarah",
-      address: "31 The Street",
-      jobTitle: "Waiter",
-    });
-    expect(result!.history.map(toName)).toEqual([
-      "How old are you?",
-      "What's your name?",
-      "What's your postcode?",
-      "What's your job title?",
-    ]);
-    expect(result!.entry.name).toEqual("What's your salary?");
-  });
-
-  it("tells the applicant they're too rich", () => {
-    const result = machine.execute({
-      ...initialContext,
-      age: 22,
-      name: "Sarah",
-      address: "31 The Street",
-      jobTitle: "Lawyer",
-      salary: 240000,
-    });
-    expect(result!.history.map(toName)).toEqual([
-      "How old are you?",
-      "What's your name?",
-      "What's your postcode?",
-      "What's your job title?",
-      "What's your salary?",
-    ]);
-    expect(result!.entry.name).toEqual("Sorry, you're to rich for free beer");
-  });
-
-  it("gives the applicant free beer", () => {
-    const result = machine.execute({
-      ...initialContext,
-      age: 22,
-      name: "Sarah",
-      address: "31 The Street",
-      jobTitle: "Bartender",
-      salary: 20000,
-    });
-    expect(result!.history.map(toName)).toEqual([
-      "How old are you?",
-      "What's your name?",
-      "What's your postcode?",
-      "What's your job title?",
-      "What's your salary?",
-    ]);
-    expect(result!.entry.name).toEqual("Yay! You can have free beer");
-  });
-
-  it("progresses through history from start to finish", () => {
-    const ctx = {
-      ...initialContext,
-      age: 22,
-      name: "Sarah",
-      address: "31 The Street",
-      jobTitle: "Bartender",
-      salary: 20000,
-    };
-    const history = [
-      "How old are you?",
-      "What's your name?",
-      "What's your postcode?",
-      "What's your job title?",
-      "What's your salary?",
-    ];
-    history.forEach((item, i) => {
-      const result = machine.execute(ctx, item);
-      if (i === history.length - 1) {
-        expect(result!.entry.name).toEqual("Yay! You can have free beer");
-      } else {
-        expect(result!.entry.name).toEqual(history[i + 1]);
-      }
-      expect(result!.history.map(toName)).toEqual(history);
-    });
-  });
-
-  it("switches back to an alternate journey when the applicant goes back and changes their answer", () => {
-    const ctx = {
-      ...initialContext,
-      age: 22,
-      name: "Sarah",
-      address: "31 The Street",
-      jobTitle: "Bartender",
-    };
-    const result = machine.execute({ ...ctx, age: 10 }, "What's your salary?");
-    expect(result!.entry.name).toEqual("Sorry, you're too young for free beer");
-    expect(result!.history.map(toName)).toEqual(["How old are you?"]);
   });
 });
 
