@@ -85,26 +85,11 @@ export const makeMachine = <
 
   const process = (
     context: Context,
-    currentEntryName: string | undefined = undefined,
-    /**
-     * INTERNAL USE ONLY
-     * The states to evaluate. Used when recursing over states in the machine.
-     */
-    _states: State<Context, Conditions>[] = states,
-    /**
-     * INTERNAL USE ONLY
-     * Used when recursing over states whose conditions return truthy (aka the
-     * states that have been "visited" on the way to the final state) to build
-     * up the pathway of visited states during execution.
-     */
-    _history: Entry<Context, Conditions>[] = [],
-    /**
-     * INTERNAL USE ONLY
-     * Used as a cache of the condition results based on the next context so
-     * that the conditions aren't re-evaluated during recursion.
-     */
+    currentEntryName: string | undefined,
+    _states: State<Context, Conditions>[],
+    _history: Entry<Context, Conditions>[],
     _evaluatedConditions = evaluateConditions(context),
-    _entryInHistory: Entry<Context, Conditions> | undefined = undefined
+    _entryInHistory: Entry<Context, Conditions> | undefined
   ): InternalExecuteResult | undefined => {
     const result = _states.reduce((entryFoundInCurrentLevel, state) => {
       if (isForkEntered(state, _evaluatedConditions)) {
@@ -169,9 +154,35 @@ export const makeMachine = <
      * the same order as they went back, unless they end up changing state entry
      * requirements via data-driven conditions).
      */
-    currentEntryName: string | undefined = undefined
+    currentEntryName: string | undefined = undefined,
+    /**
+     * INTERNAL USE ONLY
+     * The states to evaluate. Used when recursing over states in the machine.
+     */
+    _states: State<Context, Conditions>[] = states,
+    /**
+     * INTERNAL USE ONLY
+     * Used when recursing over states whose conditions return truthy (aka the
+     * states that have been "visited" on the way to the final state) to build
+     * up the pathway of visited states during execution.
+     */
+    _history: Entry<Context, Conditions>[] = [],
+    /**
+     * INTERNAL USE ONLY
+     * Used as a cache of the condition results based on the next context so
+     * that the conditions aren't re-evaluated during recursion.
+     */
+    _evaluatedConditions = evaluateConditions(context),
+    _entryInHistory: Entry<Context, Conditions> | undefined = undefined
   ): ExecuteResult | undefined => {
-    const result = process(context, currentEntryName);
+    const result = process(
+      context,
+      currentEntryName,
+      _states,
+      _history,
+      _evaluatedConditions,
+      _entryInHistory
+    );
 
     if (!result) {
       return;
@@ -185,7 +196,7 @@ export const makeMachine = <
   return execute;
 };
 
-const isFork = <
+export const isFork = <
   Context extends any,
   Conditions extends Record<string, Condition<Context>>
 >(
@@ -193,7 +204,7 @@ const isFork = <
 ): state is Fork<Context, Conditions> =>
   typeof state === "object" && state.hasOwnProperty("states");
 
-const isEntry = <
+export const isEntry = <
   Context extends any,
   Conditions extends Record<string, Condition<Context>>
 >(
@@ -204,7 +215,7 @@ const isEntry = <
  * Returns a boolean representing whether the provided state is a fork and
  * whether it should be executed according to the current context.
  */
-const isForkEntered = <
+export const isForkEntered = <
   Context extends any,
   Conditions extends Record<string, Condition<Context>>
 >(
@@ -218,7 +229,7 @@ const isForkEntered = <
  * Returns a boolean representing whether the provided state is an entry state
  * and whether it is considered to be "done" according to the current context.
  */
-const isEntryDone = <
+export const isEntryDone = <
   Context extends any,
   Conditions extends Record<string, Condition<Context>>
 >(
@@ -233,7 +244,7 @@ const isEntryDone = <
  * and whether it is considered to be the next entry according to the current
  * context.
  */
-const isEntryNext = <
+export const isEntryNext = <
   Context extends any,
   Conditions extends Record<string, Condition<Context>>
 >(

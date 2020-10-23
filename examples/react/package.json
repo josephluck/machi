@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@types/lodash": "^4.14.162",
+    "lodash": "^4.17.20",
     "react": "16.14.0",
-    "react-dom": "16.14.0"
+    "react-dom": "16.14.0",
+    "react-mermaid2": "^0.1.4"
   },
   "devDependencies": {
     "@types/jest": "26.0.14",
