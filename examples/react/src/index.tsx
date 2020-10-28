@@ -1,6 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { State, Condition, isFork, makeMachine, isEntry } from "./lib/machine";
+import {
+  State,
+  Condition,
+  isFork,
+  makeMachine,
+  isEntry,
+  Entry,
+  Fork,
+} from "./lib/machine";
 import Mermaid from "react-mermaid2";
 
 const beerStates: State<any, any>[] = [
@@ -83,12 +91,17 @@ const simpleStates: State<any, any>[] = [
     ],
   },
   {
-    fork: "middle direction",
+    fork: "middle",
     requirements: ["middle"],
     states: [
-      { name: "right/red", isDone: ["red"] },
-      { name: "right/green", isDone: ["green"] },
-      { name: "right/blue", isDone: ["blue"] },
+      {
+        fork: "yes",
+        requirements: ["yes"],
+        states: [{ name: "yes/end", isDone: ["no"] }],
+      },
+      { name: "yes/red", isDone: ["red"] },
+      { name: "yes/green", isDone: ["green"] },
+      { name: "yes/blue", isDone: ["blue"] },
     ],
   },
 ];
@@ -103,6 +116,8 @@ const simpleConditions: Record<string, Condition<any>> = {
   red: () => true,
   green: () => true,
   blue: () => true,
+  yes: () => true,
+  no: () => true,
 };
 
 const accumulateStates = (states: State<any, any>[]): State<any, any>[] =>
@@ -119,6 +134,7 @@ enum REASONS {
   FORK_ENTERED = "FORK_ENTERED",
   FORK_SKIPPED = "FORK_SKIPPED",
   ENTRY_TO_FORK = "ENTRY_TO_FORK",
+  FORK_TO_FORK = "FORK_ENTERED",
 }
 
 const process = (
@@ -131,14 +147,26 @@ const process = (
   // const allStates = accumulateStates(states);
   const result: any = [];
 
-  const run = (_states: State<any, any>[], levelCtx: any) => {
-    let prevState = _states[0];
+  const run = (
+    _states: State<any, any>[],
+    levelCtx: any,
+    prevFork?: Fork<any, any>
+  ) => {
+    let prevEntry: Entry<any, any> | undefined;
+
     _states.forEach((state) => {
       if (isFork(state)) {
-        if (isEntry(prevState)) {
-          // console.log("Entry -> Fork", { state, prevState });
+        if (prevFork) {
           result.push({
-            from: prevState,
+            from: prevFork,
+            to: state,
+            reason: REASONS.FORK_TO_FORK,
+          });
+        }
+
+        if (prevEntry && isEntry(prevEntry)) {
+          result.push({
+            from: prevEntry,
             to: state,
             reason: REASONS.ENTRY_TO_FORK,
           });
@@ -158,7 +186,7 @@ const process = (
             to: enteredFork.entry,
             reason: REASONS.FORK_ENTERED,
           });
-          run(state.states, truthyCtx);
+          run(state.states, truthyCtx, state);
         }
 
         if (skippedFork) {
@@ -167,7 +195,7 @@ const process = (
             to: skippedFork.entry,
             reason: REASONS.FORK_SKIPPED,
           });
-          run(state.states, falsyCtx);
+          run(state.states, falsyCtx, state);
         }
       }
 
@@ -190,9 +218,8 @@ const process = (
             reason: REASONS.ENTRY_DONE,
           });
         }
+        prevEntry = state;
       }
-
-      prevState = state;
     });
   };
 
@@ -204,18 +231,20 @@ const process = (
     )
   );
 
-  const mermaid = result.reduce((prev: any, link: any) => {
+  const lines = result.reduce((prev: any, link: any) => {
     if (isFork(link.from)) {
+      const fromId = makeId(link.from);
+      const toId = makeId(link.to);
       const isAre = link.from.requirements.length > 1 ? "are" : "is";
+      const reqs = `|${link.from.requirements.join(" and ")} ${isAre} true|`;
       if (isEntry(link.to) && link.reason === REASONS.FORK_ENTERED) {
-        const fromId = makeId(link.from);
-        const reqs = `|${link.from.requirements.join(" and ")} ${isAre} true|`;
-        const toId = makeId(link.to);
         const line = `${fromId} --> ${reqs} ${toId}[${link.to.name}]`;
-        return prev + `\n${line}`;
+        return [...prev, line];
       }
-      // if (isFork(link.to)) {
-      // }
+      if (isFork(link.to) && link.reason === REASONS.FORK_TO_FORK) {
+        const line = `${fromId} --> ${reqs} ${toId}{${link.to.fork}}`;
+        return [...prev, line];
+      }
       return prev;
     }
 
@@ -226,16 +255,16 @@ const process = (
       if (isEntry(link.to)) {
         const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
         const line = `${fromId}[${link.from.name}] --> ${reqs} ${toId}[${link.to.name}]`;
-        return prev + `\n${line}`;
+        return [...prev, line];
       }
       if (isFork(link.to)) {
         const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
         const line = `${fromId}[${link.from.name}] --> ${reqs} ${toId}{${link.to.fork}}`;
-        return prev + `\n${line}`;
+        return [...prev, line];
       }
       return prev;
     }
-  }, "");
+  }, []);
 
   console.log(
     result.map((line: any) => ({
@@ -244,6 +273,14 @@ const process = (
       to: toName(line.to),
     }))
   );
+
+  const mermaid = lines
+    .reduce(
+      (acc: any, line: any) => (acc.includes(line) ? acc : [...acc, line]),
+      []
+    )
+    .join("\n");
+
   console.log(mermaid);
 
   return `graph TD\n${mermaid}`;
