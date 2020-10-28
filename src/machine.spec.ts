@@ -1,4 +1,4 @@
-import { makeMachine, Entry } from "./machine";
+import { makeMachine, Entry, State, isEntry } from "./machine";
 
 describe("state machine", () => {
   it("initialises a simple machine", () => {
@@ -14,7 +14,7 @@ describe("state machine", () => {
 
     const result = execute();
     expect(result!.entry.name).toEqual("1");
-    expect(result!.history.map(toName)).toEqual([]);
+    expect(extractEntries(result!.history).map(toName)).toEqual([]);
   });
 
   it("initialises a simple machine with multiple conditions", () => {
@@ -31,7 +31,7 @@ describe("state machine", () => {
     const result = execute();
 
     expect(result!.entry.name).toEqual("1");
-    expect(result!.history.map(toName)).toEqual([]);
+    expect(extractEntries(result!.history).map(toName)).toEqual([]);
   });
 
   it("builds up history from a simple machine", () => {
@@ -60,7 +60,11 @@ describe("state machine", () => {
     const result = execute();
 
     expect(result!.entry.name).toEqual("4");
-    expect(result!.history.map(toName)).toEqual(["1", "2", "3"]);
+    expect(extractEntries(result!.history).map(toName)).toEqual([
+      "1",
+      "2",
+      "3",
+    ]);
   });
 
   it("initialises to a deep state based on context", () => {
@@ -105,7 +109,7 @@ describe("state machine", () => {
     const result = execute();
 
     expect(result!.entry.name).toEqual("4");
-    expect(result!.history.map(toName)).toEqual(["1", "2"]);
+    expect(extractEntries(result!.history).map(toName)).toEqual(["1", "2"]);
   });
 
   it("skips over a fork if all it's entries are done", () => {
@@ -145,7 +149,13 @@ describe("state machine", () => {
     const result = execute();
 
     expect(result!.entry.name).toEqual("6");
-    expect(result!.history.map(toName)).toEqual(["1", "2", "3", "4", "5"]);
+    expect(extractEntries(result!.history).map(toName)).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+    ]);
   });
 
   it("enters the correct fork if there are multiple competing forks", () => {
@@ -205,7 +215,13 @@ describe("state machine", () => {
     const result = execute();
 
     expect(result!.entry.name).toEqual("7");
-    expect(result!.history.map(toName)).toEqual(["2", "3", "4", "5", "6"]);
+    expect(extractEntries(result!.history).map(toName)).toEqual([
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+    ]);
   });
 
   it("correctly determines next state and history when machine context is updated", () => {
@@ -228,11 +244,11 @@ describe("state machine", () => {
     const result = execute(false);
 
     expect(result!.entry.name).toEqual("2");
-    expect(result!.history.map(toName)).toEqual(["1"]);
+    expect(extractEntries(result!.history).map(toName)).toEqual(["1"]);
 
     const next = execute(true);
     expect(next!.entry.name).toEqual("3");
-    expect(next!.history.map(toName)).toEqual(["1", "2"]);
+    expect(extractEntries(next!.history).map(toName)).toEqual(["1", "2"]);
   });
 
   it("correctly goes back to previous state when the machines context is updated", () => {
@@ -255,11 +271,59 @@ describe("state machine", () => {
     const result = execute(true);
 
     expect(result!.entry.name).toEqual("3");
-    expect(result!.history.map(toName)).toEqual(["1", "2"]);
+    expect(extractEntries(result!.history).map(toName)).toEqual(["1", "2"]);
 
     const next = execute(false);
     expect(next!.entry.name).toEqual("2");
-    expect(next!.history.map(toName)).toEqual(["1"]);
+    expect(extractEntries(next!.history).map(toName)).toEqual(["1"]);
+  });
+
+  it("includes forks in history", () => {
+    const execute = makeMachine(
+      [
+        {
+          fork: "Yes",
+          requirements: ["yes"],
+          states: [
+            {
+              name: "1",
+              isDone: ["yes"],
+            },
+            {
+              fork: "Yes again",
+              requirements: ["yes"],
+              states: [{ name: "2", isDone: ["yes"] }],
+            },
+            {
+              fork: "Yes again and again",
+              requirements: ["yes"],
+              states: [
+                { name: "3", isDone: ["yes"] },
+                {
+                  fork: "No",
+                  requirements: ["no"],
+                  states: [{ name: "4", isDone: ["no"] }],
+                },
+              ],
+            },
+            {
+              name: "5",
+              isDone: ["no"],
+            },
+          ],
+        },
+      ],
+      basicConditions
+    );
+    const result = execute();
+    expect(result?.history.map(toName)).toEqual([
+      "Yes",
+      "1",
+      "Yes again",
+      "2",
+      "Yes again and again",
+      "3",
+    ]);
   });
 
   it("progresses through history consecutively when current state name is within history", () => {
@@ -290,11 +354,13 @@ describe("state machine", () => {
 
     const retainedHistory = ["1", "2", "3"];
     expect(result!.entry.name).toEqual("4");
-    expect(result!.history.map(toName)).toEqual(retainedHistory);
+    expect(extractEntries(result!.history).map(toName)).toEqual(
+      retainedHistory
+    );
 
     const next = execute(void null, "2");
     expect(next!.entry.name).toEqual("3");
-    expect(next!.history.map(toName)).toEqual(retainedHistory);
+    expect(extractEntries(next!.history).map(toName)).toEqual(retainedHistory);
   });
 
   it("doesn't progress through history when current state name is within history, but the context has changed the flow", () => {
@@ -325,12 +391,16 @@ describe("state machine", () => {
 
     const retainedHistory = ["1", "2", "3"];
     expect(result!.entry.name).toEqual("4");
-    expect(result!.history.map(toName)).toEqual(retainedHistory);
+    expect(extractEntries(result!.history).map(toName)).toEqual(
+      retainedHistory
+    );
 
     const next = execute(false, "1");
     expect(next!.entry.name).toEqual("5");
-    expect(next!.history.map(toName)).not.toEqual(retainedHistory);
-    expect(next!.history.map(toName)).toEqual(["1"]);
+    expect(extractEntries(next!.history).map(toName)).not.toEqual(
+      retainedHistory
+    );
+    expect(extractEntries(next!.history).map(toName)).toEqual(["1"]);
   });
 });
 
@@ -341,4 +411,8 @@ const basicConditions = {
   no: cond(false),
 };
 
-const toName = (entry: Entry<any, any>) => entry.name;
+const extractEntries = (states: State<any, any>[]): Entry<any, any>[] =>
+  states.filter(isEntry) as Entry<any, any>[];
+
+const toName = (state: State<any, any>) =>
+  isEntry(state) ? state.name : state.fork;

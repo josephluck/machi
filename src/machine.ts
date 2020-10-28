@@ -67,7 +67,7 @@ export const makeMachine = <
 
   type ExecuteResult = {
     entry: Entry<Context, Conditions>;
-    history: Entry<Context, Conditions>[];
+    history: State<Context, Conditions>[];
   };
 
   type InternalExecuteResult = ExecuteResult & {
@@ -87,12 +87,13 @@ export const makeMachine = <
     context: Context,
     currentEntryName: string | undefined,
     _states: State<Context, Conditions>[],
-    _history: Entry<Context, Conditions>[],
+    _history: State<Context, Conditions>[],
     _evaluatedConditions = evaluateConditions(context),
     _entryInHistory: Entry<Context, Conditions> | undefined
   ): InternalExecuteResult | undefined => {
     const result = _states.reduce((entryFoundInCurrentLevel, state) => {
       if (isForkEntered(state, _evaluatedConditions)) {
+        _history.push(state);
         return process(
           context,
           currentEntryName,
@@ -104,13 +105,14 @@ export const makeMachine = <
       }
 
       if (entryFoundInCurrentLevel) {
-        if (currentEntryName && _history.length) {
-          const nextIndexInHistory = _history.findIndex(
-            (entry) => entry.name === currentEntryName
+        const _entriesInHistory = _history.filter(isEntry);
+        if (currentEntryName && _entriesInHistory.length) {
+          const nextIndexInHistory = _entriesInHistory.findIndex(
+            (s) => isEntry(s) && s.name === currentEntryName
           );
-          const entryInHistory = _history[nextIndexInHistory + 1];
+          const entryInHistory = _entriesInHistory[nextIndexInHistory + 1];
 
-          return entryInHistory
+          return entryInHistory && isEntry(entryInHistory)
             ? { ...entryFoundInCurrentLevel, entryInHistory }
             : entryFoundInCurrentLevel;
         }

@@ -73,7 +73,7 @@ const simpleStates: State<any, any>[] = [
   { name: "second", isDone: ["first", "second"] },
   { name: "third", isDone: ["third"] },
   {
-    fork: "direction",
+    fork: "horizontal",
     requirements: ["left"],
     states: [
       { name: "left/red", isDone: ["red"] },
@@ -82,7 +82,7 @@ const simpleStates: State<any, any>[] = [
     ],
   },
   {
-    fork: "direction",
+    fork: "horizontal",
     requirements: ["right"],
     states: [
       { name: "right/red", isDone: ["red"] },
@@ -91,17 +91,26 @@ const simpleStates: State<any, any>[] = [
     ],
   },
   {
-    fork: "middle",
-    requirements: ["middle"],
+    fork: "vertical",
+    requirements: ["up"],
     states: [
+      { name: "up/red", isDone: ["red"] },
       {
-        fork: "yes",
-        requirements: ["yes"],
-        states: [{ name: "yes/end", isDone: ["no"] }],
+        fork: "high",
+        requirements: ["high"],
+        states: [{ name: "high/red", isDone: ["highred"] }],
       },
-      { name: "yes/red", isDone: ["red"] },
-      { name: "yes/green", isDone: ["green"] },
-      { name: "yes/blue", isDone: ["blue"] },
+      { name: "up/green", isDone: ["green"] },
+      { name: "up/blue", isDone: ["blue"] },
+    ],
+  },
+  {
+    fork: "vertical",
+    requirements: ["down"],
+    states: [
+      { name: "down/red", isDone: ["red"] },
+      { name: "down/green", isDone: ["green"] },
+      { name: "down/blue", isDone: ["blue"] },
     ],
   },
 ];
@@ -118,6 +127,10 @@ const simpleConditions: Record<string, Condition<any>> = {
   blue: () => true,
   yes: () => true,
   no: () => true,
+  up: () => true,
+  down: () => true,
+  high: () => true,
+  highred: () => true,
 };
 
 const accumulateStates = (states: State<any, any>[]): State<any, any>[] =>
@@ -147,23 +160,11 @@ const process = (
   // const allStates = accumulateStates(states);
   const result: any = [];
 
-  const run = (
-    _states: State<any, any>[],
-    levelCtx: any,
-    prevFork?: Fork<any, any>
-  ) => {
+  const run = (_states: State<any, any>[], levelCtx: any) => {
     let prevEntry: Entry<any, any> | undefined;
 
     _states.forEach((state) => {
       if (isFork(state)) {
-        if (prevFork) {
-          result.push({
-            from: prevFork,
-            to: state,
-            reason: REASONS.FORK_TO_FORK,
-          });
-        }
-
         if (prevEntry && isEntry(prevEntry)) {
           result.push({
             from: prevEntry,
@@ -181,21 +182,77 @@ const process = (
         const skippedFork = execute({}, undefined, states, [], falsyCtx);
 
         if (enteredFork) {
+          console.log("Entered fork: ", [
+            ...enteredFork.history.map(toName),
+            toName(enteredFork.entry),
+          ]);
+          enteredFork.history.forEach((historyState, i) => {
+            if (isFork(historyState)) {
+              const prevHistoryState = enteredFork.history[i - 1];
+              if (prevHistoryState) {
+                result.push({
+                  from: prevHistoryState,
+                  to: historyState,
+                  reason: isEntry(prevHistoryState)
+                    ? REASONS.ENTRY_TO_FORK
+                    : REASONS.FORK_TO_FORK,
+                });
+              }
+              const nextState = enteredFork.history[i + 1];
+              if (nextState) {
+                result.push({
+                  from: historyState,
+                  to: nextState,
+                  reason: isEntry(prevHistoryState)
+                    ? REASONS.FORK_ENTERED
+                    : REASONS.FORK_TO_FORK,
+                });
+              }
+            }
+          });
           result.push({
             from: state,
             to: enteredFork.entry,
             reason: REASONS.FORK_ENTERED,
           });
-          run(state.states, truthyCtx, state);
+          run(state.states, truthyCtx);
         }
 
         if (skippedFork) {
+          console.log("Skipped fork: ", [
+            ...skippedFork.history.map(toName),
+            toName(skippedFork.entry),
+          ]);
+          skippedFork.history.forEach((historyState, i) => {
+            if (isFork(historyState)) {
+              const prevHistoryState = skippedFork.history[i - 1];
+              if (prevHistoryState) {
+                result.push({
+                  from: prevHistoryState,
+                  to: historyState,
+                  reason: isEntry(prevHistoryState)
+                    ? REASONS.ENTRY_TO_FORK
+                    : REASONS.FORK_TO_FORK,
+                });
+              }
+              const nextState = skippedFork.history[i + 1];
+              if (nextState) {
+                result.push({
+                  from: historyState,
+                  to: nextState,
+                  reason: isEntry(prevHistoryState)
+                    ? REASONS.FORK_ENTERED
+                    : REASONS.FORK_TO_FORK,
+                });
+              }
+            }
+          });
           result.push({
             from: state,
             to: skippedFork.entry,
             reason: REASONS.FORK_SKIPPED,
           });
-          run(state.states, falsyCtx, state);
+          run(state.states, falsyCtx);
         }
       }
 
@@ -236,7 +293,11 @@ const process = (
       const fromId = makeId(link.from);
       const toId = makeId(link.to);
       const isAre = link.from.requirements.length > 1 ? "are" : "is";
-      const reqs = `|${link.from.requirements.join(" and ")} ${isAre} true|`;
+      console.log({ link });
+      const truthy = link.reason === REASONS.FORK_ENTERED ? "true" : "false";
+      const reqs = `|${link.from.requirements.join(
+        " and "
+      )} ${isAre} ${truthy}|`;
       if (isEntry(link.to) && link.reason === REASONS.FORK_ENTERED) {
         const line = `${fromId} --> ${reqs} ${toId}[${link.to.name}]`;
         return [...prev, line];
@@ -253,12 +314,12 @@ const process = (
       const toId = makeId(link.to);
       const isAre = link.from.isDone.length > 1 ? "are" : "is";
       if (isEntry(link.to)) {
-        const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
+        const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true b|`;
         const line = `${fromId}[${link.from.name}] --> ${reqs} ${toId}[${link.to.name}]`;
         return [...prev, line];
       }
       if (isFork(link.to)) {
-        const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
+        const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true c|`;
         const line = `${fromId}[${link.from.name}] --> ${reqs} ${toId}{${link.to.fork}}`;
         return [...prev, line];
       }
@@ -284,157 +345,6 @@ const process = (
   console.log(mermaid);
 
   return `graph TD\n${mermaid}`;
-};
-
-type ProcessResult = {
-  previousState: State<any, any> | undefined;
-  result: string;
-};
-
-const _process = (
-  _states: State<any, any>[],
-  _conditions: Record<string, Condition<any>>,
-  _previousState: State<any, any> | undefined = undefined,
-  _previousResult: string = ""
-): ProcessResult => {
-  const execute = makeMachine(_states, _conditions);
-
-  const makeConditionsResult = (result: boolean) =>
-    Object.entries(_conditions).reduce(
-      (acc, [name]) => ({ ...acc, [name]: result }),
-      {} as Record<string, boolean>
-    );
-
-  const allTruthyConditions = makeConditionsResult(true);
-  const allFalsyConditions = makeConditionsResult(false);
-
-  const processed = _states.reduce(
-    (acc, state) => {
-      if (isFork(state)) {
-        const next = execute(
-          {},
-          undefined,
-          state.states,
-          [],
-          allFalsyConditions
-        );
-
-        const missing = execute({}, undefined, state.states, [], {
-          ...allFalsyConditions,
-          ...state.requirements.reduce(
-            (acc, name) => ({ ...acc, [name]: true }),
-            {}
-          ),
-        });
-
-        console.log(
-          "Running fork",
-          acc.previousState,
-          state.fork,
-          missing?.entry.name
-        );
-
-        const r = state.requirements.join(" and ");
-        const s = state.requirements.length > 1 ? "are" : "is";
-
-        const forkMermaid = `${makeId(state)}{${state.fork}}`;
-
-        const nextMermaid = next
-          ? `${makeId(state)} --> |${r} ${s} FOO| ${makeId(next.entry)}[${
-              next.entry.name
-            }]`
-          : undefined;
-
-        const subStates = _process(state.states, _conditions, state);
-
-        // console.log("Evaluating fork ", { state, subStates });
-
-        const prevId = makeId(acc.previousState);
-        const links = [forkMermaid, nextMermaid];
-        const result =
-          `${prevId} --> ${links.filter(Boolean).join("\n")}\n` +
-          subStates.result;
-
-        return {
-          previousState: state,
-          result: acc.result.length ? `${acc.result}\n${result}` : result,
-        };
-      }
-
-      if (isEntry(state)) {
-        if (!acc.previousState) {
-          console.log("On first entry", state.name);
-          return {
-            previousState: state,
-            result: "",
-          };
-        }
-
-        if (isFork(acc.previousState)) {
-          console.log("On entry linked to fork", acc.previousState, state);
-          const r = acc.previousState.requirements.join(" and ");
-          const s = acc.previousState.requirements.length > 1 ? "are" : "is";
-
-          const forkMermaid = `${makeId(acc.previousState)}{${
-            acc.previousState.fork
-          }}`;
-
-          const nextMermaid = state
-            ? `${makeId(acc.previousState)} --> |${r} ${s} BAR| ${makeId(
-                state
-              )}[${state.name}]`
-            : undefined;
-
-          const prevId = makeId(acc.previousState);
-          const links = [forkMermaid, nextMermaid];
-          const result = `${prevId} --> ${links.filter(Boolean).join("\n")}`;
-
-          return {
-            previousState: state,
-            result: acc.result ? `${acc.result}\n${result}` : result,
-          };
-        }
-
-        if (isEntry(acc.previousState)) {
-          console.log(
-            "On entry linked to entry",
-            acc.previousState.name,
-            state.name
-          );
-          const r = acc.previousState.isDone.join(" and ");
-          const s = acc.previousState.isDone.length > 1 ? "are" : "is";
-
-          const prevId = makeId(acc.previousState);
-          const prevName = isFork(acc.previousState!)
-            ? acc.previousState.fork
-            : isEntry(acc.previousState!)
-            ? acc.previousState.name
-            : "undefined";
-
-          const previousLink = `${prevId}[${prevName}] -->`;
-          const nextDestination = `${makeId(state)}(${state.name})`;
-          const selfDestination = `${prevId}(${prevName})`;
-
-          const nextMermaid = `${previousLink} |${r} ${s} done| ${nextDestination}`;
-          const toSelfMermaid = `${previousLink} |${r} ${s} not done| ${selfDestination}`;
-
-          return {
-            previousState: state,
-            result: acc.result.length
-              ? `${acc.result}\n${nextMermaid}\n${toSelfMermaid}`
-              : `${nextMermaid}\n${toSelfMermaid}`,
-          };
-        }
-
-        return acc;
-      }
-
-      return acc;
-    },
-    { previousState: _previousState, result: _previousResult } as ProcessResult
-  );
-
-  return processed;
 };
 
 const makeId = (state: State<any, any> | undefined) =>
