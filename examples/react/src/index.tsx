@@ -8,6 +8,7 @@ import {
   isEntry,
   Entry,
   Fork,
+  HistoryState,
 } from "./lib/machine";
 import Mermaid from "react-mermaid2";
 
@@ -94,12 +95,12 @@ const simpleStates: State<any, any>[] = [
     fork: "vertical",
     requirements: ["up"],
     states: [
-      { name: "up/red", isDone: ["red"] },
       {
         fork: "high",
         requirements: ["high"],
         states: [{ name: "high/red", isDone: ["highred"] }],
       },
+      { name: "up/red", isDone: ["red"] },
       { name: "up/green", isDone: ["green"] },
       { name: "up/blue", isDone: ["blue"] },
     ],
@@ -147,7 +148,6 @@ enum REASONS {
   FORK_ENTERED = "FORK_ENTERED",
   FORK_SKIPPED = "FORK_SKIPPED",
   ENTRY_TO_FORK = "ENTRY_TO_FORK",
-  FORK_TO_FORK = "FORK_ENTERED",
 }
 
 const process = (
@@ -161,17 +161,8 @@ const process = (
   const result: any = [];
 
   const run = (_states: State<any, any>[], levelCtx: any) => {
-    let prevEntry: Entry<any, any> | undefined;
-
     _states.forEach((state) => {
       if (isFork(state)) {
-        if (prevEntry && isEntry(prevEntry)) {
-          result.push({
-            from: prevEntry,
-            to: state,
-            reason: REASONS.ENTRY_TO_FORK,
-          });
-        }
         const truthyCtx = { ...levelCtx };
         const falsyCtx = { ...levelCtx };
         state.requirements.forEach((cond) => {
@@ -182,76 +173,26 @@ const process = (
         const skippedFork = execute({}, undefined, states, [], falsyCtx);
 
         if (enteredFork) {
-          console.log("Entered fork: ", [
-            ...enteredFork.history.map(toName),
-            toName(enteredFork.entry),
-          ]);
-          enteredFork.history.forEach((historyState, i) => {
-            if (isFork(historyState)) {
-              const prevHistoryState = enteredFork.history[i - 1];
-              if (prevHistoryState) {
-                result.push({
-                  from: prevHistoryState,
-                  to: historyState,
-                  reason: isEntry(prevHistoryState)
-                    ? REASONS.ENTRY_TO_FORK
-                    : REASONS.FORK_TO_FORK,
-                });
-              }
-              const nextState = enteredFork.history[i + 1];
-              if (nextState) {
-                result.push({
-                  from: historyState,
-                  to: nextState,
-                  reason: isEntry(prevHistoryState)
-                    ? REASONS.FORK_ENTERED
-                    : REASONS.FORK_TO_FORK,
-                });
-              }
-            }
-          });
-          result.push({
-            from: state,
-            to: enteredFork.entry,
-            reason: REASONS.FORK_ENTERED,
-          });
+          result.push(
+            ...getHistoryLinks(
+              enteredFork.history,
+              enteredFork.entry,
+              false,
+              truthyCtx
+            )
+          );
           run(state.states, truthyCtx);
         }
 
         if (skippedFork) {
-          console.log("Skipped fork: ", [
-            ...skippedFork.history.map(toName),
-            toName(skippedFork.entry),
-          ]);
-          skippedFork.history.forEach((historyState, i) => {
-            if (isFork(historyState)) {
-              const prevHistoryState = skippedFork.history[i - 1];
-              if (prevHistoryState) {
-                result.push({
-                  from: prevHistoryState,
-                  to: historyState,
-                  reason: isEntry(prevHistoryState)
-                    ? REASONS.ENTRY_TO_FORK
-                    : REASONS.FORK_TO_FORK,
-                });
-              }
-              const nextState = skippedFork.history[i + 1];
-              if (nextState) {
-                result.push({
-                  from: historyState,
-                  to: nextState,
-                  reason: isEntry(prevHistoryState)
-                    ? REASONS.FORK_ENTERED
-                    : REASONS.FORK_TO_FORK,
-                });
-              }
-            }
-          });
-          result.push({
-            from: state,
-            to: skippedFork.entry,
-            reason: REASONS.FORK_SKIPPED,
-          });
+          result.push(
+            ...getHistoryLinks(
+              skippedFork.history,
+              skippedFork.entry,
+              true,
+              falsyCtx
+            )
+          );
           run(state.states, falsyCtx);
         }
       }
@@ -262,20 +203,13 @@ const process = (
         });
         const next = execute({}, undefined, states, [], levelCtx);
 
-        if (!next) {
-          // result.push({
-          //   from: state,
-          //   to: state,
-          //   reason: REASONS.ENTRY_NOT_DONE,
-          // });
-        } else {
+        if (next) {
           result.push({
             from: state,
             to: next.entry,
             reason: REASONS.ENTRY_DONE,
           });
         }
-        prevEntry = state;
       }
     });
   };
@@ -293,16 +227,21 @@ const process = (
       const fromId = makeId(link.from);
       const toId = makeId(link.to);
       const isAre = link.from.requirements.length > 1 ? "are" : "is";
-      console.log({ link });
-      const truthy = link.reason === REASONS.FORK_ENTERED ? "true" : "false";
+      const truthy =
+        link.reason === REASONS.FORK_ENTERED
+          ? "true"
+          : link.reason === REASONS.FORK_SKIPPED
+          ? "false"
+          : "unknown";
       const reqs = `|${link.from.requirements.join(
         " and "
       )} ${isAre} ${truthy}|`;
-      if (isEntry(link.to) && link.reason === REASONS.FORK_ENTERED) {
+
+      if (isEntry(link.to)) {
         const line = `${fromId} --> ${reqs} ${toId}[${link.to.name}]`;
         return [...prev, line];
       }
-      if (isFork(link.to) && link.reason === REASONS.FORK_TO_FORK) {
+      if (isFork(link.to)) {
         const line = `${fromId} --> ${reqs} ${toId}{${link.to.fork}}`;
         return [...prev, line];
       }
@@ -345,6 +284,81 @@ const process = (
   console.log(mermaid);
 
   return `graph TD\n${mermaid}`;
+};
+
+const getHistoryLinks = (
+  history: HistoryState<any, any>[],
+  entry: Entry<any, any>,
+  skipped: boolean,
+  ctx: any
+) => {
+  const result: any = [];
+  history.forEach((historyState, i) => {
+    const prevHistoryState = history[i - 1];
+    const nextHistoryState = history[i + 1];
+
+    if (isFork(historyState)) {
+      if (prevHistoryState) {
+        result.push({
+          from: prevHistoryState,
+          to: historyState,
+          reason: historyState.skipped
+            ? REASONS.FORK_SKIPPED
+            : REASONS.FORK_ENTERED,
+        });
+      }
+      if (nextHistoryState) {
+        result.push({
+          from: historyState,
+          to: nextHistoryState,
+          reason: historyState.skipped
+            ? REASONS.FORK_SKIPPED
+            : REASONS.FORK_ENTERED,
+        });
+      }
+    }
+
+    if (isEntry(historyState)) {
+      if (prevHistoryState) {
+        result.push({
+          from: prevHistoryState,
+          to: historyState,
+          reason: isEntry(prevHistoryState)
+            ? REASONS.ENTRY_DONE
+            : prevHistoryState.skipped
+            ? REASONS.FORK_SKIPPED
+            : REASONS.FORK_ENTERED,
+        });
+      }
+      if (nextHistoryState) {
+        result.push({
+          from: historyState,
+          to: nextHistoryState,
+          reason: isEntry(nextHistoryState)
+            ? REASONS.ENTRY_DONE
+            : nextHistoryState.skipped
+            ? REASONS.FORK_SKIPPED
+            : REASONS.FORK_ENTERED,
+        });
+      }
+    }
+
+    if (!nextHistoryState) {
+      result.push({
+        from: historyState,
+        to: entry,
+        reason: isEntry(historyState)
+          ? REASONS.ENTRY_DONE
+          : historyState.skipped
+          ? REASONS.FORK_SKIPPED
+          : REASONS.FORK_ENTERED,
+      });
+    }
+  });
+
+  console.log([...history, entry], { skipped, ctx });
+
+  return result;
 };
 
 const makeId = (state: State<any, any> | undefined) =>

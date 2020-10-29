@@ -35,6 +35,13 @@ export type State<
   Conditions extends Record<string, Condition<Context>>
 > = Fork<Context, Conditions> | Entry<Context, Conditions>;
 
+export type HistoryState<
+  Context,
+  Conditions extends Record<string, Condition<Context>>
+> =
+  | (Fork<Context, Conditions> & { skipped: boolean })
+  | Entry<Context, Conditions>;
+
 /**
  * A predicate based on the machine's context
  */
@@ -67,7 +74,7 @@ export const makeMachine = <
 
   type ExecuteResult = {
     entry: Entry<Context, Conditions>;
-    history: State<Context, Conditions>[];
+    history: HistoryState<Context, Conditions>[];
   };
 
   type InternalExecuteResult = ExecuteResult & {
@@ -87,13 +94,13 @@ export const makeMachine = <
     context: Context,
     currentEntryName: string | undefined,
     _states: State<Context, Conditions>[],
-    _history: State<Context, Conditions>[],
+    _history: HistoryState<Context, Conditions>[],
     _evaluatedConditions = evaluateConditions(context),
     _entryInHistory: Entry<Context, Conditions> | undefined
   ): InternalExecuteResult | undefined => {
     const result = _states.reduce((entryFoundInCurrentLevel, state) => {
       if (isForkEntered(state, _evaluatedConditions)) {
-        _history.push(state);
+        _history.push({ ...state, skipped: false });
         return process(
           context,
           currentEntryName,
@@ -102,6 +109,8 @@ export const makeMachine = <
           _evaluatedConditions,
           _entryInHistory
         );
+      } else if (isFork(state)) {
+        // _history.push({ ...state, skipped: true });
       }
 
       if (entryFoundInCurrentLevel) {
