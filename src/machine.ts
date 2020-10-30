@@ -93,14 +93,33 @@ export const makeMachine = <
   const process = (
     context: Context,
     currentEntryName: string | undefined,
-    _states: State<Context, Conditions>[],
-    _history: HistoryState<Context, Conditions>[],
+    _states: State<Context, Conditions>[] = [],
+    _history: HistoryState<Context, Conditions>[] = [],
     _evaluatedConditions = evaluateConditions(context),
-    _entryInHistory: Entry<Context, Conditions> | undefined
+    _entryInHistory: Entry<Context, Conditions> | undefined = undefined,
+    includeSkippedForksInHistory: boolean = false
   ): InternalExecuteResult | undefined => {
     const result = _states.reduce((entryFoundInCurrentLevel, state) => {
+      const historyAlreadyIncludesState =
+        _history.findIndex((item) => {
+          if (isEntry(item)) {
+            if (isEntry(state)) {
+              return item.name === state.name;
+            } else {
+              return item.name === state.fork;
+            }
+          } else {
+            if (isEntry(state)) {
+              return item.fork === state.name;
+            } else {
+              return item.fork === state.fork;
+            }
+          }
+        }) > -1;
       if (isForkEntered(state, _evaluatedConditions)) {
-        _history.push({ ...state, skipped: false });
+        if (!historyAlreadyIncludesState) {
+          _history.push({ ...state, skipped: false });
+        }
         return process(
           context,
           currentEntryName,
@@ -109,8 +128,12 @@ export const makeMachine = <
           _evaluatedConditions,
           _entryInHistory
         );
-      } else if (isFork(state)) {
-        // _history.push({ ...state, skipped: true });
+      } else if (
+        includeSkippedForksInHistory &&
+        isFork(state) &&
+        !historyAlreadyIncludesState
+      ) {
+        _history.push({ ...state, skipped: true });
       }
 
       if (entryFoundInCurrentLevel) {
@@ -184,7 +207,8 @@ export const makeMachine = <
      * that the conditions aren't re-evaluated during recursion.
      */
     _evaluatedConditions = evaluateConditions(context),
-    _entryInHistory: Entry<Context, Conditions> | undefined = undefined
+    _entryInHistory: Entry<Context, Conditions> | undefined = undefined,
+    includeSkippedForksInHistory: boolean = false
   ): ExecuteResult | undefined => {
     const result = process(
       context,
