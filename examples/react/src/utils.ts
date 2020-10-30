@@ -246,3 +246,25 @@ export const deduplicateResult = (result: Link[]): Link[] =>
         })
       );
     });
+
+export const validateResult = (
+  states: State<any, any>[],
+  result: Link[]
+): Link[] =>
+  result.filter((link) => {
+    const orderedIds = accumulateStates(states).map(makeId);
+    const fromIndex = orderedIds.indexOf(makeId(link.from));
+    const toIndex = orderedIds.indexOf(makeId(link.to));
+    return fromIndex >= 0 && toIndex >= 0 && fromIndex < toIndex;
+  });
+
+export const accumulateStates = (
+  states: State<any, any>[]
+): State<any, any>[] =>
+  states.reduce(
+    (acc, state) =>
+      isFork(state)
+        ? [...acc, state, ...accumulateStates(state.states)]
+        : [...acc, state],
+    [] as State<any, any>[]
+  );

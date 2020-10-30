@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { State, Condition } from "./lib/machine";
+import { State } from "./lib/machine";
 import Mermaid from "react-mermaid2";
 // import { process } from "./utils";
 import { process } from "./utils2";
@@ -34,33 +34,19 @@ const beerStates: State<any, any>[] = [
         states: [
           {
             name: "Too rich",
-            isDone: ["no"],
+            isDone: [],
           },
         ],
       },
-      { name: "Free beer", isDone: ["no"] },
+      { name: "Free beer", isDone: [] },
     ],
   },
   {
     fork: "Old enough?",
     requirements: ["isTooYoung"],
-    states: [{ name: "Too young", isDone: ["no"] }],
+    states: [{ name: "Too young", isDone: [] }],
   },
 ];
-
-const beerConditions: Record<string, Condition<any>> = {
-  no: () => false,
-  hasEnteredAge: (ctx) => !!ctx.age,
-  hasEnteredName: (ctx) => !!ctx.name && ctx.name.length > 0,
-  hasEnteredAddress: (ctx) => !!ctx.address,
-  hasEnteredJobTitle: (ctx) => !!ctx.jobTitle,
-  hasEnteredSalary: (ctx) => !!ctx.salary,
-  isOfLegalDrinkingAge: (ctx) => !!ctx.age && ctx.age >= 18,
-  isTooYoung: (ctx) => !!ctx.age && ctx.age < 18,
-  isRich: (ctx) => !!ctx.salary && ctx.salary > 100000,
-  isEligible: (ctx) => !!ctx.salary && ctx.salary > 100000,
-  enteringAddressManually: (ctx) => ctx.bypassPostcodeLookup,
-};
 
 const simpleStates: State<any, any>[] = [
   { name: "first", isDone: ["first"] },
@@ -84,7 +70,6 @@ const simpleStates: State<any, any>[] = [
       { name: "ninth", isDone: ["ninth"] },
     ],
   },
-  // { name: "curveball", isDone: [] },
   {
     fork: "is exactly ten",
     requirements: ["isExactly10"],
@@ -108,30 +93,12 @@ const simpleStates: State<any, any>[] = [
   },
   {
     name: "done",
-    isDone: [],
+    isDone: ["no"],
   },
 ];
 
-const simpleConditions: Record<string, Condition<any>> = {
-  first: () => true,
-  second: () => true,
-  third: () => true,
-  left: () => true,
-  right: () => true,
-  middle: () => true,
-  red: () => true,
-  green: () => true,
-  blue: () => true,
-  yes: () => true,
-  no: () => true,
-  up: () => true,
-  down: () => true,
-  high: () => true,
-  highred: () => true,
-};
-
-const rendered = process(beerStates, beerConditions);
-// const rendered = process(simpleStates, simpleConditions);
+const rendered = process(beerStates);
+// const rendered = process(simpleStates);
 
 const App = () => {
   console.log(rendered.split("\n"));
