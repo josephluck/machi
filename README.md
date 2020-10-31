@@ -176,6 +176,8 @@ The second argument to Machi is an object of condition functions that are referr
 
 ## Graphical representations of a machine
 
-As a machine grows, it can become difficult to follow the flow of the machine. Machi comes with graph generation utilities using Mermaid.
+As a machine grows, it can become difficult to follow the flow of the machine. Machi comes with graph generation utilities using Mermaid which will generate a graphical representation of the flow.
 
-TODO...
+```typescript
+const graph = generateMermaid(states);
+```
