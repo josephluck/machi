@@ -144,6 +144,32 @@ execute({
 // }
 ```
 
+#### Replaying history
+
+In certain scenarios (for example a navigation flow where the user can navigate backwards), it's useful to find the next state in history, as apposed to the end state. For example, imagine that in the machine above, the user has filled out all of the information and has reached the end of the machine, and then has navigated backwards to an earlier state and has changed information. It's possible for the user to traverse back through the states in the same order (providing they have not changed the data such that they are taken down a different direction):
+
+```typescript
+execute(
+  {
+    name: "Joseph Luck",
+    age: 36,
+  },
+  "What's your name"
+);
+// {
+//   entry: { name: "What's your age" },
+//   history: [
+//     { name: "What's your name" },
+//     { name: "What's your age" },
+//     { fork: "Old enough to drink?" },
+//   ]
+// }
+```
+
+In this example, although the age entry's `isDone` is satisfied, it's returned as the execute return as it's the entry following to the name entry in the history.
+
+You'll notice that the history retains all states.
+
 ### Conditions
 
 The second argument to Machi is an object of condition functions that are referred to by Entries Forks as strings (these are type safe if you're using TypeScript!). Condition functions are predicates that are provided the current data context for the machine and are expected to return a boolean.
