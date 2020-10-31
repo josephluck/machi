@@ -107,13 +107,14 @@ export const makeMachine = <
       if (entryFoundInCurrentLevel) {
         const _entriesInHistory = _history.filter(isEntry);
         if (currentEntryName && _entriesInHistory.length) {
-          const nextIndexInHistory = _entriesInHistory.findIndex(
+          const currentIndexInHistory = _entriesInHistory.findIndex(
             (s) => isEntry(s) && s.name === currentEntryName
           );
-          const entryInHistory = _entriesInHistory[nextIndexInHistory + 1];
+          const nextEntryInHistory =
+            _entriesInHistory[currentIndexInHistory + 1];
 
-          return entryInHistory && isEntry(entryInHistory)
-            ? { ...entryFoundInCurrentLevel, entryInHistory }
+          return nextEntryInHistory && isEntry(nextEntryInHistory)
+            ? { ...entryFoundInCurrentLevel, nextEntryInHistory }
             : entryFoundInCurrentLevel;
         }
 

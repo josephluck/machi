@@ -1,4 +1,4 @@
-import { State, isFork, isEntry } from "./lib/machine";
+import { State, isFork, isEntry } from "../machine";
 
 export enum REASONS {
   ENTRY_DONE = "ENTRY_DONE",
@@ -44,12 +44,12 @@ export const linksToMermaid = (result: Link[]) =>
       const toId = makeId(link.to);
       const isAre = link.from.isDone.length > 1 ? "are" : "is";
       if (isEntry(link.to)) {
-        const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true b|`;
+        const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
         const line = `${fromId}[${link.from.name}] --> ${reqs} ${toId}[${link.to.name}]`;
         return [...prev, line];
       }
       if (isFork(link.to)) {
-        const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true c|`;
+        const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
         const line = `${fromId}[${link.from.name}] --> ${reqs} ${toId}{${link.to.fork}}`;
         return [...prev, line];
       }

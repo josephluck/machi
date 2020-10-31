@@ -1,4 +1,4 @@
-import { isEntry, isFork, State } from "./lib/machine";
+import { isEntry, isFork, State } from "../machine";
 import {
   deduplicateLinks,
   Link,

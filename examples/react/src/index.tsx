@@ -3,101 +3,131 @@ import ReactDOM from "react-dom";
 import Mermaid from "react-mermaid2";
 
 import { State } from "./lib/machine";
-import { generateMermaid } from "./generate-state-links";
+import { generateMermaid } from "./lib/graph/generate-state-links";
 
 const beerStates: State<any, any>[] = [
   {
-    name: "Age?",
+    name: "What's your age?",
     isDone: ["hasEnteredAge"],
   },
   {
-    fork: "Old enough?",
+    fork: "Old enough to drink?",
     requirements: ["isOfLegalDrinkingAge"],
     states: [
-      { name: "Name?", isDone: ["hasEnteredName"] },
-      { name: "Postcode?", isDone: ["hasEnteredAddress"] },
+      { name: "Great! What's your name?", isDone: ["hasEnteredName"] },
+      { name: "And your postcode?", isDone: ["hasEnteredAddress"] },
       {
-        fork: "Manual address",
+        fork: "Bypassed postcode lookup",
         requirements: ["enteringAddressManually"],
         states: [
           {
-            name: "Address?",
+            name: "Cool. What's your address?",
             isDone: ["hasEnteredAddress"],
           },
         ],
       },
-      { name: "Job title?", isDone: ["hasEnteredJobTitle"] },
-      { name: "Salary?", isDone: ["hasEnteredSalary"] },
+      { name: "How much money do you earn?", isDone: ["hasEnteredSalary"] },
       {
-        fork: "Too rich?",
+        fork: "Are you too rich for free beer?",
         requirements: ["isRich"],
         states: [
           {
-            name: "Too rich",
+            name: "You're too rich for free beer! Go buy your own!",
             isDone: [],
           },
         ],
       },
-      { name: "Free beer", isDone: [] },
+      { name: "Awesome. We'll send you some free beer!", isDone: [] },
     ],
   },
   {
-    fork: "Old enough?",
+    fork: "Old enough to drink?",
     requirements: ["isTooYoung"],
-    states: [{ name: "Too young", isDone: [] }],
+    states: [{ name: "Sorry, you're not old enough to drink!", isDone: [] }],
   },
 ];
 
-const simpleStates: State<any, any>[] = [
-  { name: "first", isDone: ["first"] },
-  { name: "second", isDone: ["first", "second"] },
-  { name: "third", isDone: ["third"] },
+// const simpleStates: State<any, any>[] = [
+//   { name: "first", isDone: ["first"] },
+//   { name: "second", isDone: ["first", "second"] },
+//   { name: "third", isDone: ["third"] },
+//   {
+//     fork: "is more than 10",
+//     requirements: ["moreThan10"],
+//     states: [
+//       { name: "fourth", isDone: ["fourth"] },
+//       { name: "fifth", isDone: ["fifth"] },
+//       { name: "sixth", isDone: ["sixth"] },
+//     ],
+//   },
+//   {
+//     fork: "is less than 10",
+//     requirements: ["lessThan10"],
+//     states: [
+//       { name: "seventh", isDone: ["seventh"] },
+//       { name: "eighth", isDone: ["eighth"] },
+//       { name: "ninth", isDone: ["ninth"] },
+//     ],
+//   },
+//   {
+//     fork: "is exactly ten",
+//     requirements: ["isExactly10"],
+//     states: [
+//       {
+//         fork: "is decimal",
+//         requirements: ["isDecimal"],
+//         states: [
+//           { name: "tenth", isDone: ["tenth"] },
+//           {
+//             fork: "is one decimal point",
+//             requirements: ["isOneDecimalPoint"],
+//             states: [{ name: "eleventh", isDone: ["eleventh"] }],
+//           },
+//         ],
+//       },
+//       { name: "twelfth", isDone: ["twelfth"] },
+//       { name: "thirteenth", isDone: ["thirteenth"] },
+//       { name: "fourteenth", isDone: ["fourteenth"] },
+//     ],
+//   },
+//   {
+//     name: "done",
+//     isDone: ["no"],
+//   },
+// ];
+
+const simpleBeerStates = [
   {
-    fork: "is more than 10",
-    requirements: ["moreThan10"],
-    states: [
-      { name: "fourth", isDone: ["fourth"] },
-      { name: "fifth", isDone: ["fifth"] },
-      { name: "sixth", isDone: ["sixth"] },
-    ],
+    name: "What's your name",
+    isDone: ["hasProvidedName"],
   },
   {
-    fork: "is less than 10",
-    requirements: ["lessThan10"],
-    states: [
-      { name: "seventh", isDone: ["seventh"] },
-      { name: "eighth", isDone: ["eighth"] },
-      { name: "ninth", isDone: ["ninth"] },
-    ],
+    name: "And your age?",
+    isDone: ["hasProvidedAge"],
   },
   {
-    fork: "is exactly ten",
-    requirements: ["isExactly10"],
+    fork: "Old enough to drink?",
+    requirements: ["isOfLegalDrinkingAge"],
     states: [
       {
-        fork: "is decimal",
-        requirements: ["isDecimal"],
-        states: [
-          { name: "tenth", isDone: ["tenth"] },
-          {
-            fork: "is one decimal point",
-            requirements: ["isOneDecimalPoint"],
-            states: [{ name: "eleventh", isDone: ["eleventh"] }],
-          },
-        ],
+        name: "Great, you can have free beer!",
+        isDone: [],
       },
-      { name: "twelfth", isDone: ["twelfth"] },
-      { name: "thirteenth", isDone: ["thirteenth"] },
-      { name: "fourteenth", isDone: ["fourteenth"] },
     ],
   },
   {
-    name: "done",
-    isDone: ["no"],
+    fork: "Old enough to drink?",
+    requirements: ["isTooYoung"],
+    states: [
+      {
+        name: "Sorry, you're too young for free beer",
+        isDone: [],
+      },
+    ],
   },
 ];
 
-const rendered = generateMermaid(beerStates);
+const rendered = generateMermaid(simpleBeerStates);
 // const rendered = process(simpleStates);
 
 const App = () => {
