@@ -35,13 +35,6 @@ export type State<
   Conditions extends Record<string, Condition<Context>>
 > = Fork<Context, Conditions> | Entry<Context, Conditions>;
 
-export type HistoryState<
-  Context,
-  Conditions extends Record<string, Condition<Context>>
-> =
-  | (Fork<Context, Conditions> & { skipped: boolean })
-  | Entry<Context, Conditions>;
-
 /**
  * A predicate based on the machine's context
  */
@@ -74,7 +67,7 @@ export const makeMachine = <
 
   type ExecuteResult = {
     entry: Entry<Context, Conditions>;
-    history: HistoryState<Context, Conditions>[];
+    history: State<Context, Conditions>[];
   };
 
   type InternalExecuteResult = ExecuteResult & {
@@ -94,32 +87,13 @@ export const makeMachine = <
     context: Context,
     currentEntryName: string | undefined,
     _states: State<Context, Conditions>[] = [],
-    _history: HistoryState<Context, Conditions>[] = [],
+    _history: State<Context, Conditions>[] = [],
     _evaluatedConditions = evaluateConditions(context),
-    _entryInHistory: Entry<Context, Conditions> | undefined = undefined,
-    includeSkippedForksInHistory: boolean = false
+    _entryInHistory: Entry<Context, Conditions> | undefined = undefined
   ): InternalExecuteResult | undefined => {
     const result = _states.reduce((entryFoundInCurrentLevel, state) => {
-      const historyAlreadyIncludesState =
-        _history.findIndex((item) => {
-          if (isEntry(item)) {
-            if (isEntry(state)) {
-              return item.name === state.name;
-            } else {
-              return item.name === state.fork;
-            }
-          } else {
-            if (isEntry(state)) {
-              return item.fork === state.name;
-            } else {
-              return item.fork === state.fork;
-            }
-          }
-        }) > -1;
       if (isForkEntered(state, _evaluatedConditions)) {
-        if (!historyAlreadyIncludesState) {
-          _history.push({ ...state, skipped: false });
-        }
+        _history.push(state);
         return process(
           context,
           currentEntryName,
@@ -128,12 +102,6 @@ export const makeMachine = <
           _evaluatedConditions,
           _entryInHistory
         );
-      } else if (
-        includeSkippedForksInHistory &&
-        isFork(state) &&
-        !historyAlreadyIncludesState
-      ) {
-        _history.push({ ...state, skipped: true });
       }
 
       if (entryFoundInCurrentLevel) {
@@ -207,8 +175,7 @@ export const makeMachine = <
      * that the conditions aren't re-evaluated during recursion.
      */
     _evaluatedConditions = evaluateConditions(context),
-    _entryInHistory: Entry<Context, Conditions> | undefined = undefined,
-    includeSkippedForksInHistory: boolean = false
+    _entryInHistory: Entry<Context, Conditions> | undefined = undefined
   ): ExecuteResult | undefined => {
     const result = process(
       context,

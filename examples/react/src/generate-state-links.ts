@@ -1,13 +1,18 @@
 import { isEntry, isFork, State } from "./lib/machine";
 import {
-  deduplicateResult,
+  deduplicateLinks,
   Link,
   REASONS,
-  resultToMermaid,
-  validateResult,
+  linksToMermaid,
+  filterInvalidLinks,
 } from "./utils";
 
-export const process = (states: State<any, any>[]) => {
+/**
+ * Takes a list of nested states and generates an array of links between states
+ * in logical flow order. Takes that result and generates a mermaid-compatible
+ * graph from them.
+ */
+export const generateStateLinks = (states: State<any, any>[]) => {
   const result: Link[] = [];
 
   const run = (
@@ -45,11 +50,14 @@ export const process = (states: State<any, any>[]) => {
 
   run(states);
 
-  const deduplicatedResult = deduplicateResult(result);
+  const deduplicatedResult = deduplicateLinks(result);
 
-  const validatedResult = validateResult(states, deduplicatedResult);
+  return filterInvalidLinks(states, deduplicatedResult);
+};
 
-  const mermaidLines = resultToMermaid(validatedResult);
+export const generateMermaid = (states: State<any, any>[]) => {
+  const links = generateStateLinks(states);
+  const mermaidLines = linksToMermaid(links);
 
   return `graph TD\n${mermaidLines.join("\n")}`;
 };

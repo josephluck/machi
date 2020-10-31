@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { State } from "./lib/machine";
 import Mermaid from "react-mermaid2";
-// import { process } from "./utils";
-import { process } from "./utils2";
+
+import { State } from "./lib/machine";
+import { generateMermaid } from "./generate-state-links";
 
 const beerStates: State<any, any>[] = [
   {
@@ -97,7 +97,7 @@ const simpleStates: State<any, any>[] = [
   },
 ];
 
-const rendered = process(beerStates);
+const rendered = generateMermaid(beerStates);
 // const rendered = process(simpleStates);
 
 const App = () => {
