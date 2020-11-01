@@ -176,7 +176,7 @@ You'll notice that the history retains all states regardless of the returned ent
 
 ### Conditions
 
-The second argument to Machi is an object of condition functions that are referred to by Entries Forks as strings (these are type safe if you're using TypeScript!). Condition functions are predicates that are provided the current data context for the machine and are expected to return a boolean.
+The second argument to Machi is an object of condition functions that are referred to by Entries and Forks as strings (these are type safe if you're using TypeScript!). Condition functions are predicates that are provided the current data context for the machine and are expected to return a boolean.
 
 ### Extra data
 
