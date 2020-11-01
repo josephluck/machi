@@ -12,12 +12,12 @@ import {
  * in logical flow order. Takes that result and generates a mermaid-compatible
  * graph from them.
  */
-export const generateStateLinks = (states: State<any, any>[]) => {
+export const generateStateLinks = (states: State<any, any, {}>[]) => {
   const result: Link[] = [];
 
   const run = (
-    _states: State<any, any>[],
-    nextStateInParentLevel?: State<any, any>
+    _states: State<any, any, {}>[],
+    nextStateInParentLevel?: State<any, any, {}>
   ) => {
     _states.forEach((state, i) => {
       const nextState = _states[i + 1];
@@ -55,7 +55,7 @@ export const generateStateLinks = (states: State<any, any>[]) => {
   return filterInvalidLinks(states, deduplicatedResult);
 };
 
-export const generateMermaid = (states: State<any, any>[]) => {
+export const generateMermaid = (states: State<any, any, {}>[]) => {
   const links = generateStateLinks(states);
   const mermaidLines = linksToMermaid(links);
 

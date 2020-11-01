@@ -35,7 +35,7 @@ describe("state machine", () => {
   });
 
   it("builds up history from a simple machine", () => {
-    const execute = makeMachine(
+    const execute = makeMachine<void, {}>(
       [
         {
           name: "1",
@@ -68,7 +68,7 @@ describe("state machine", () => {
   });
 
   it("initialises to a deep state based on context", () => {
-    const execute = makeMachine(
+    const execute = makeMachine<void, {}>(
       [
         {
           fork: "Is Yes",
@@ -225,7 +225,7 @@ describe("state machine", () => {
   });
 
   it("correctly determines next state and history when machine context is updated", () => {
-    const execute = makeMachine<boolean>(
+    const execute = makeMachine<boolean, {}>(
       [
         {
           fork: "Is Yes",
@@ -252,7 +252,7 @@ describe("state machine", () => {
   });
 
   it("correctly goes back to previous state when the machines context is updated", () => {
-    const execute = makeMachine<boolean>(
+    const execute = makeMachine<boolean, {}>(
       [
         {
           fork: "Is Yes",
@@ -326,7 +326,7 @@ describe("state machine", () => {
     ]);
   });
 
-  it("progresses through history consecutively when current state name is within history", () => {
+  it.only("progresses through history consecutively when current state name is within history", () => {
     const execute = makeMachine(
       [
         {
@@ -364,7 +364,7 @@ describe("state machine", () => {
   });
 
   it("doesn't progress through history when current state name is within history, but the context has changed the flow", () => {
-    const execute = makeMachine<boolean>(
+    const execute = makeMachine<boolean, {}>(
       [
         {
           fork: "Is Yes",
@@ -402,6 +402,25 @@ describe("state machine", () => {
     );
     expect(extractEntries(next!.history).map(toName)).toEqual(["1"]);
   });
+
+  it("allows additional data to be stored with entries", () => {
+    const execute = makeMachine<void, { additional: { data: string } }>(
+      [
+        {
+          name: "1",
+          isDone: ["no"],
+          additional: {
+            data: "works",
+          },
+        },
+      ],
+      basicConditions
+    );
+
+    const result = execute();
+    expect(result!.entry.name).toEqual("1");
+    expect(result!.entry.additional).toEqual({ data: "works" });
+  });
 });
 
 const cond = (val: boolean) => () => val;
@@ -411,8 +430,8 @@ const basicConditions = {
   no: cond(false),
 };
 
-const extractEntries = (states: State<any, any>[]): Entry<any, any>[] =>
-  states.filter(isEntry) as Entry<any, any>[];
+const extractEntries = (states: State<any, any, {}>[]): Entry<any, any, {}>[] =>
+  states.filter(isEntry) as Entry<any, any, {}>[];
 
-const toName = (state: State<any, any>) =>
+const toName = (state: State<any, any, {}>) =>
   isEntry(state) ? state.name : state.fork;

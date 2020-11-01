@@ -41,7 +41,7 @@ Machi provides a deterministic state machine driven by data. Once a machine is c
 
 When a Machi machine is provided with data, it will iterate through all of the states and determine the first entry where the data does not satisfy it's constraints.
 
-Terminal states can be declared by using Entries and decisions in the direction of the flow can be created by using Forks.
+Entry states can be declared using Entries and decisions in the direction of the flow can be declared using Forks.
 
 ### Example:
 
@@ -88,30 +88,30 @@ const execute = makeMachine<Context>(
     isOfLegalDrinkingAge: (context) => context.age >= 18,
     isTooYoung: (context) => context.age < 18,
   }
-);
+));
 
-execute({
+console.log(execute({
   name: undefined,
   age: undefined,
-});
+}));
 // --> What's your name
 
-execute({
+console.log(execute({
   name: "Joseph Luck",
   age: undefined,
-});
+}));
 // --> { entry: { name: "What's your age", ... }, history: [ ... ] }
 
-execute({
+console.log(execute({
   name: "Joseph Luck",
   age: 14,
-});
+}));
 // --> { entry: { name: "Sorry, you're too young for free beer", ... }, history: [ ... ] }
 
-execute({
+console.log(execute({
   name: "Joseph Luck",
   age: 36,
-});
+}));
 // --> { entry: { name: "Great, you can have free beer!", ... }, history: [ ... ] }
 ```
 
@@ -130,10 +130,12 @@ When an Entry is evaluates, it's `isDone` conditions will be checked, and if any
 Machi will accumulate the history of Entries and entered Forks that resulted in the terminal state. For example:
 
 ```typescript
-execute({
-  name: "Joseph Luck",
-  age: 36,
-});
+console.log(
+  execute({
+    name: "Joseph Luck",
+    age: 36,
+  })
+);
 // {
 //   entry: { name: "Great, you can have free beer!" },
 //   history: [
@@ -146,15 +148,17 @@ execute({
 
 #### Replaying history
 
-In certain scenarios (for example a navigation flow where the user can navigate backwards), it's useful to find the next state in history, as apposed to the end state. For example, imagine that in the machine above, the user has filled out all of the information and has reached the end of the machine, and then has navigated backwards to an earlier state and has changed information. It's possible for the user to traverse back through the states in the same order (providing they have not changed the data such that they are taken down a different direction):
+In certain scenarios (for example a navigation flow where the user can navigate backwards), it's useful to find the next state in history rather than the end state. For example, imagine that in the machine above the user has filled out all of the information and has reached the end of the machine. Now, the user has navigated back to the first screen and has updated their name. Now they expect to be taken to the age screen again, essentially travelling forwards through the screens they just went back through in the same order. Of course, if the user updates information that changes the direction through the states (aka different forks) then those paths are respected. Here's an example:
 
 ```typescript
-execute(
-  {
-    name: "Joseph Luck",
-    age: 36,
-  },
-  "What's your name"
+console.log(
+  execute(
+    {
+      name: "Joseph Luck",
+      age: 36,
+    },
+    "What's your name"
+  )
 );
 // {
 //   entry: { name: "What's your age" },
@@ -168,15 +172,75 @@ execute(
 
 In this example, although the age entry's `isDone` is satisfied, it's returned as the execute return as it's the entry following to the name entry in the history.
 
-You'll notice that the history retains all states.
+You'll notice that the history retains all states regardless of the returned entry.
 
 ### Conditions
 
 The second argument to Machi is an object of condition functions that are referred to by Entries Forks as strings (these are type safe if you're using TypeScript!). Condition functions are predicates that are provided the current data context for the machine and are expected to return a boolean.
 
+### Extra data
+
+Entries can specify any additional data. For example:
+
+```typescript
+type Context = {
+  name: string | undefined;
+  age: number | undefined;
+};
+
+type AdditionalEntryData = {
+  screen: () => React.ReactNode;
+};
+
+const execute = makeMachine<Context, AdditionalEntryData>(
+  [
+    {
+      name: "What's your name",
+      isDone: ["hasProvidedName"],
+      screen: NameScreen,
+    },
+    {
+      name: "And your age?",
+      isDone: ["hasProvidedAge"],
+      screen: AgeScreen,
+    },
+    {
+      fork: "Old enough to drink?",
+      requirements: ["isOfLegalDrinkingAge"],
+      states: [
+        {
+          name: "Great, you can have free beer!",
+          isDone: [],
+          screen: FreeBeerScreen,
+        },
+      ],
+    },
+    {
+      fork: "Old enough to drink?",
+      requirements: ["isTooYoung"],
+      states: [
+        {
+          name: "Sorry, you're too young for free beer",
+          isDone: [],
+          screen: TooYoungScreen,
+        },
+      ],
+    },
+  ],
+  {
+    hasProvidedName: (context) => !!context.name,
+    hasProvidedAge: (context) => !!context.age,
+    isOfLegalDrinkingAge: (context) => context.age >= 18,
+    isTooYoung: (context) => context.age < 18,
+  }
+));
+```
+
+If you're using TypeScript, you can provide type safety to your entries additional properties by using the second generic of `makeMachine`.
+
 ## Graphical representations of a machine
 
-As a machine grows, it can become difficult to follow the flow of the machine. Machi comes with graph generation utilities using Mermaid which will generate a graphical representation of the flow.
+As a machine grows, it can become difficult to follow the flow of states. Machi comes with a utility for generating a graphical representation of a machine using Mermaid.
 
 ```typescript
 const graph = generateMermaid(states);

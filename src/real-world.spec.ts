@@ -12,7 +12,7 @@ describe("free beer example", () => {
   const initialContext: Context = {
     bypassPostcodeLookup: false,
   };
-  const execute = makeMachine<Context>(
+  const execute = makeMachine<Context, {}>(
     [
       {
         name: "How old are you?",
@@ -252,7 +252,7 @@ describe("free beer example", () => {
   });
 });
 
-const extractEntries = (states: State<any, any>[]): Entry<any, any>[] =>
-  states.filter(isEntry) as Entry<any, any>[];
+const extractEntries = (states: State<any, any, {}>[]): Entry<any, any, {}>[] =>
+  states.filter(isEntry) as Entry<any, any, {}>[];
 
-const toName = (entry: Entry<any, any>) => entry.name;
+const toName = (entry: Entry<any, any, {}>) => entry.name;

@@ -5,7 +5,7 @@ import Mermaid from "react-mermaid2";
 import { State } from "./lib/machine";
 import { generateMermaid } from "./lib/graph/generate-state-links";
 
-const beerStates: State<any, any>[] = [
+const beerStates: State<any, any, {}>[] = [
   {
     name: "What's your age?",
     isDone: ["hasEnteredAge"],
@@ -47,7 +47,7 @@ const beerStates: State<any, any>[] = [
   },
 ];
 
-// const simpleStates: State<any, any>[] = [
+// const simpleStates: State<any, any, {}>[] = [
 //   { name: "first", isDone: ["first"] },
 //   { name: "second", isDone: ["first", "second"] },
 //   { name: "third", isDone: ["third"] },

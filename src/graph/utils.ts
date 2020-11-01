@@ -7,8 +7,8 @@ export enum REASONS {
 }
 
 export type Link = {
-  from: State<any, any>;
-  to: State<any, any>;
+  from: State<any, any, any>;
+  to: State<any, any, any>;
   reason: REASONS;
 };
 
@@ -33,7 +33,7 @@ export const linksToMermaid = (result: Link[]) =>
         return [...prev, line];
       }
       if (isFork(link.to)) {
-        const line = `${fromId} --> ${reqs} ${toId}{${link.to.fork}}`;
+        const line = `${fromId} --> ${reqs} ${toId}{${link.to!.fork}}`;
         return [...prev, line];
       }
       return prev;
@@ -50,17 +50,19 @@ export const linksToMermaid = (result: Link[]) =>
       }
       if (isFork(link.to)) {
         const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
-        const line = `${fromId}[${link.from.name}] --> ${reqs} ${toId}{${link.to.fork}}`;
+        const line = `${fromId}[${link.from.name}] --> ${reqs} ${toId}{${
+          link.to!.fork
+        }}`;
         return [...prev, line];
       }
       return prev;
     }
   }, []);
 
-export const makeId = (state: State<any, any> | undefined) =>
+export const makeId = (state: State<any, any, any> | undefined) =>
   !state ? "undefined" : isFork(state) ? toId(state.fork) : toId(state.name);
 
-export const toName = (state: State<any, any> | undefined) =>
+export const toName = (state: State<any, any, any> | undefined) =>
   !state ? "undefined" : isFork(state) ? state.fork : state.name;
 
 const toId = (str: string) => str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
@@ -84,7 +86,7 @@ export const deduplicateLinks = (result: Link[]): Link[] =>
     );
 
 export const filterInvalidLinks = (
-  states: State<any, any>[],
+  states: State<any, any, any>[],
   result: Link[]
 ): Link[] =>
   result.filter((link) => {
@@ -99,12 +101,12 @@ export const filterInvalidLinks = (
  * a flattened list of states in logical order.
  */
 export const accumulateStates = (
-  states: State<any, any>[]
-): State<any, any>[] =>
+  states: State<any, any, any>[]
+): State<any, any, any>[] =>
   states.reduce(
     (acc, state) =>
       isFork(state)
         ? [...acc, state, ...accumulateStates(state.states)]
         : [...acc, state],
-    [] as State<any, any>[]
+    [] as State<any, any, any>[]
   );

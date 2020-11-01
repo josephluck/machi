@@ -4,14 +4,23 @@
  */
 export type Entry<
   Context,
-  Conditions extends Record<string, Condition<Context>>
-> = {
-  /**
-   * Must be unique within the context of a machine
-   */
-  name: string;
-  isDone: (keyof Conditions)[];
-};
+  Conditions extends Record<string, Condition<Context>>,
+  AdditionalEntryData = never
+> = AdditionalEntryData extends never
+  ? {
+      /**
+       * Must be unique within the context of a machine
+       */
+      name: string;
+      isDone: (keyof Conditions)[];
+    }
+  : AdditionalEntryData & {
+      /**
+       * Must be unique within the context of a machine
+       */
+      name: string;
+      isDone: (keyof Conditions)[];
+    };
 
 /**
  * A decision in the flow. When all requirements return truthy, the fork's
@@ -19,11 +28,12 @@ export type Entry<
  */
 export type Fork<
   Context,
-  Conditions extends Record<string, Condition<Context>>
+  Conditions extends Record<string, Condition<Context>>,
+  AdditionalEntryData
 > = {
   fork: string;
   requirements: (keyof Conditions)[];
-  states: State<Context, Conditions>[];
+  states: State<Context, Conditions, AdditionalEntryData>[];
 };
 
 /**
@@ -32,8 +42,11 @@ export type Fork<
  */
 export type State<
   Context,
-  Conditions extends Record<string, Condition<Context>>
-> = Fork<Context, Conditions> | Entry<Context, Conditions>;
+  Conditions extends Record<string, Condition<Context>>,
+  AdditionalEntryData
+> =
+  | Fork<Context, Conditions, AdditionalEntryData>
+  | Entry<Context, Conditions, AdditionalEntryData>;
 
 /**
  * A predicate based on the machine's context
@@ -47,6 +60,7 @@ export type Condition<Context> = (context: Context) => boolean;
  */
 export const makeMachine = <
   Context extends any = void,
+  AdditionalEntryData extends {} = never,
   Conditions extends Record<string, Condition<Context>> = Record<
     string,
     Condition<Context>
@@ -55,7 +69,7 @@ export const makeMachine = <
   /**
    * The states in the machine.
    */
-  states: State<Context, Conditions>[],
+  states: State<Context, Conditions, AdditionalEntryData>[],
   /**
    * The condition functions (used by states) of the machine. States in the
    * machine can refer to condition functions by their key in this object as
@@ -66,12 +80,12 @@ export const makeMachine = <
   type ConditionsResult = Record<keyof Conditions, boolean>;
 
   type ExecuteResult = {
-    entry: Entry<Context, Conditions>;
-    history: State<Context, Conditions>[];
+    entry: Entry<Context, Conditions, AdditionalEntryData>;
+    history: State<Context, Conditions, AdditionalEntryData>[];
   };
 
   type InternalExecuteResult = ExecuteResult & {
-    entryInHistory: Entry<Context, Conditions> | undefined;
+    entryInHistory: Entry<Context, Conditions, AdditionalEntryData> | undefined;
   };
 
   const evaluateConditions = (context: Context) =>
@@ -86,10 +100,12 @@ export const makeMachine = <
   const process = (
     context: Context,
     currentEntryName: string | undefined,
-    _states: State<Context, Conditions>[] = [],
-    _history: State<Context, Conditions>[] = [],
+    _states: State<Context, Conditions, AdditionalEntryData>[] = [],
+    _history: State<Context, Conditions, AdditionalEntryData>[] = [],
     _evaluatedConditions = evaluateConditions(context),
-    _entryInHistory: Entry<Context, Conditions> | undefined = undefined
+    _entryInHistory:
+      | Entry<Context, Conditions, AdditionalEntryData>
+      | undefined = undefined
   ): InternalExecuteResult | undefined => {
     const result = _states.reduce((entryFoundInCurrentLevel, state) => {
       if (isForkEntered(state, _evaluatedConditions)) {
@@ -110,11 +126,13 @@ export const makeMachine = <
           const currentIndexInHistory = _entriesInHistory.findIndex(
             (s) => isEntry(s) && s.name === currentEntryName
           );
-          const nextEntryInHistory =
-            _entriesInHistory[currentIndexInHistory + 1];
+          const entryInHistory = _entriesInHistory[currentIndexInHistory + 1];
 
-          return nextEntryInHistory && isEntry(nextEntryInHistory)
-            ? { ...entryFoundInCurrentLevel, nextEntryInHistory }
+          return entryInHistory && isEntry(entryInHistory)
+            ? {
+                ...entryFoundInCurrentLevel,
+                entryInHistory,
+              }
             : entryFoundInCurrentLevel;
         }
 
@@ -162,21 +180,23 @@ export const makeMachine = <
      * INTERNAL USE ONLY
      * The states to evaluate. Used when recursing over states in the machine.
      */
-    _states: State<Context, Conditions>[] = states,
+    _states: State<Context, Conditions, AdditionalEntryData>[] = states,
     /**
      * INTERNAL USE ONLY
      * Used when recursing over states whose conditions return truthy (aka the
      * states that have been "visited" on the way to the final state) to build
      * up the pathway of visited states during execution.
      */
-    _history: Entry<Context, Conditions>[] = [],
+    _history: Entry<Context, Conditions, AdditionalEntryData>[] = [],
     /**
      * INTERNAL USE ONLY
      * Used as a cache of the condition results based on the next context so
      * that the conditions aren't re-evaluated during recursion.
      */
     _evaluatedConditions = evaluateConditions(context),
-    _entryInHistory: Entry<Context, Conditions> | undefined = undefined
+    _entryInHistory:
+      | Entry<Context, Conditions, AdditionalEntryData>
+      | undefined = undefined
   ): ExecuteResult | undefined => {
     const result = process(
       context,
@@ -201,18 +221,23 @@ export const makeMachine = <
 
 export const isFork = <
   Context extends any,
-  Conditions extends Record<string, Condition<Context>>
+  Conditions extends Record<string, Condition<Context>>,
+  AdditionalEntryData extends {} = {}
 >(
-  state: State<Context, Conditions>
-): state is Fork<Context, Conditions> =>
-  typeof state === "object" && state.hasOwnProperty("states");
+  state: State<Context, Conditions, AdditionalEntryData>
+): state is Fork<Context, Conditions, AdditionalEntryData> =>
+  typeof state === "object" &&
+  state.hasOwnProperty("fork") &&
+  state.hasOwnProperty("states") &&
+  !state.hasOwnProperty("name");
 
 export const isEntry = <
   Context extends any,
-  Conditions extends Record<string, Condition<Context>>
+  Conditions extends Record<string, Condition<Context>>,
+  AdditionalEntryData extends {} = {}
 >(
-  state: State<Context, Conditions>
-): state is Entry<Context, Conditions> => !isFork(state);
+  state: State<Context, Conditions, AdditionalEntryData>
+): state is Entry<Context, Conditions, AdditionalEntryData> => !isFork(state);
 
 /**
  * Returns a boolean representing whether the provided state is a fork and
@@ -220,12 +245,13 @@ export const isEntry = <
  */
 export const isForkEntered = <
   Context extends any,
-  Conditions extends Record<string, Condition<Context>>
+  Conditions extends Record<string, Condition<Context>>,
+  AdditionalEntryData extends {} = {}
 >(
-  state: State<Context, Conditions>,
+  state: State<Context, Conditions, AdditionalEntryData>,
   evaluatedConditions: Record<keyof Conditions, boolean>
-): state is Fork<Context, Conditions> =>
-  isFork<Context, Conditions>(state) &&
+): state is Fork<Context, Conditions, AdditionalEntryData> =>
+  isFork<Context, Conditions, AdditionalEntryData>(state) &&
   state.requirements.every((name) => evaluatedConditions[name]);
 
 /**
@@ -234,12 +260,13 @@ export const isForkEntered = <
  */
 export const isEntryDone = <
   Context extends any,
-  Conditions extends Record<string, Condition<Context>>
+  Conditions extends Record<string, Condition<Context>>,
+  AdditionalEntryData extends {} = {}
 >(
-  state: State<Context, Conditions>,
+  state: State<Context, Conditions, AdditionalEntryData>,
   evaluatedConditions: Record<keyof Conditions, boolean>
-): state is Entry<Context, Conditions> =>
-  isEntry<Context, Conditions>(state) &&
+): state is Entry<Context, Conditions, AdditionalEntryData> =>
+  isEntry<Context, Conditions, AdditionalEntryData>(state) &&
   state.isDone.every((name) => evaluatedConditions[name]);
 
 /**
@@ -249,10 +276,11 @@ export const isEntryDone = <
  */
 export const isEntryNext = <
   Context extends any,
-  Conditions extends Record<string, Condition<Context>>
+  Conditions extends Record<string, Condition<Context>>,
+  AdditionalEntryData extends {} = {}
 >(
-  state: State<Context, Conditions>,
+  state: State<Context, Conditions, AdditionalEntryData>,
   evaluatedConditions: Record<keyof Conditions, boolean>
-): state is Entry<Context, Conditions> =>
-  isEntry<Context, Conditions>(state) &&
+): state is Entry<Context, Conditions, AdditionalEntryData> =>
+  isEntry<Context, Conditions, AdditionalEntryData>(state) &&
   state.isDone.some((name) => !evaluatedConditions[name]);
