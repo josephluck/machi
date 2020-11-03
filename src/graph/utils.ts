@@ -1,4 +1,4 @@
-import { State, isFork, isEntry } from "../machine";
+import { State, isFork, isEntry, Fork } from "../machine";
 
 export enum REASONS {
   ENTRY_DONE = "ENTRY_DONE",
@@ -66,6 +66,27 @@ export const toName = (state: State<any, any, any> | undefined) =>
   !state ? "undefined" : isFork(state) ? state.fork : state.name;
 
 const toId = (str: string) => str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+
+/**
+ * If found, will return the link in the list of provided links that is a
+ * skipped fork where the fork has the same from and to.
+ *
+ * Used to combine the skipped conditions for forks that have multiple
+ * destinations. If this isn't done then multiple links will exist per skipped
+ * instance of a fork. Usually if the fork is binary, this isn't a problem.
+ */
+export const getExistingSkippedForkLink = (
+  result: Link[],
+  from: Fork<any, any, any>,
+  to: State<any, any, any>
+): Link | undefined =>
+  result.find(
+    (link) =>
+      link.reason === REASONS.FORK_SKIPPED &&
+      isFork(from) &&
+      makeId(link.from) === makeId(from) &&
+      makeId(link.to) === makeId(to)
+  );
 
 /**
  * Takes a list of links and removes the duplicate links where the from, to and
