@@ -153,3 +153,15 @@ export const accumulateStates = (
         : [...acc, state],
     [] as State<any, any, any>[]
   );
+
+export const sortLinks = (links: Link[]): Link[] =>
+  links.sort((linkA, linkB) => {
+    if (
+      linkA.reason === REASONS.FORK_SKIPPED &&
+      makeId(linkA.from) === makeId(linkB.from)
+    ) {
+      return 1;
+    }
+
+    return -1;
+  });

@@ -8,6 +8,7 @@ import {
   toName,
   makeId,
   getExistingSkippedForkLink,
+  sortLinks,
 } from "./utils";
 
 /**
@@ -58,17 +59,21 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
             // for skipping the fork (these become "and false" conditions for
             // skipping as the combination of all the falsy entry conditions are
             // the skip condition for the fork.
-            // TODO: this link would be best moved towards the end of the entered
-            // links as the graph looks strange otherwise.
-            // do the re-ordering once the generation is done though rather than
-            // complicating this part.
             result.forEach((link) => {
               if (
                 makeId(link.from) === makeId(state) &&
                 makeId(link.to) === makeId(toState) &&
                 link.reason === REASONS.FORK_SKIPPED
               ) {
-                link.from.requirements.push(...state.requirements);
+                // Make a deep(ish) copy of the state so we don't inadvertently
+                // change the fork's entry links requirements
+                link.from = {
+                  ...link.from,
+                  requirements: [
+                    ...link.from.requirements,
+                    ...state.requirements,
+                  ],
+                };
               }
             });
           } else {
@@ -95,8 +100,18 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
   run(states);
 
   const deduplicatedResult = deduplicateLinks(result);
+  const filteredLinks = filterInvalidLinks(states, deduplicatedResult);
+  const sortedLinks = sortLinks(filteredLinks);
 
-  return filterInvalidLinks(states, deduplicatedResult);
+  // console.log(
+  //   sortedLinks.map((link) => ({
+  //     from: toName(link.from),
+  //     to: toName(link.to),
+  //     reason: link.reason,
+  //   }))
+  // );
+
+  return sortedLinks;
 };
 
 export const generateMermaid = (states: State<any, any, {}>[]) => {
