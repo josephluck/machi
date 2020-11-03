@@ -79,11 +79,33 @@ export const deduplicateLinks = (result: Link[]): Link[] =>
         i ===
         acc.findIndex(
           (b) =>
-            makeId(link.from) === makeId(b.from) &&
-            makeId(link.to) === makeId(b.to) &&
+            areStatesIdentical(link.from, b.from) &&
+            areStatesIdentical(link.to, b.to) &&
             link.reason === b.reason
         )
     );
+
+export const areStatesIdentical = (
+  stateA: State<any, any, any>,
+  stateB: State<any, any, any>
+) => {
+  if (isFork(stateA) && isEntry(stateB)) {
+    return false;
+  }
+  if (isEntry(stateA) && isFork(stateB)) {
+    return false;
+  }
+  if (makeId(stateA) !== makeId(stateB)) {
+    return false;
+  }
+  if (isFork(stateA) && isFork(stateB)) {
+    return stateA.requirements.join("") === stateB.requirements.join("");
+  }
+  if (isEntry(stateA) && isEntry(stateB)) {
+    return stateA.isDone.join("") === stateB.isDone.join("");
+  }
+  return false;
+};
 
 export const filterInvalidLinks = (
   states: State<any, any, any>[],
