@@ -32,6 +32,11 @@ export type Fork<
   AdditionalEntryData
 > = {
   fork: string;
+  /**
+   * Optional name to create a group around this forks sub-groups during chart
+   * generation.
+   */
+  chartGroup?: string;
   requirements: (keyof Conditions)[];
   states: State<Context, Conditions, AdditionalEntryData>[];
 };

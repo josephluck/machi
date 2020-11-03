@@ -6,14 +6,29 @@ export enum REASONS {
   FORK_SKIPPED = "FORK_SKIPPED",
 }
 
-export type Link = {
-  from: State<any, any, any>;
-  to: State<any, any, any>;
-  reason: REASONS;
+type Group = {
+  type: "group";
+  end: boolean;
+  name: string;
 };
+
+export type Link =
+  | Group
+  | {
+      type: "link";
+      from: State<any, any, any>;
+      to: State<any, any, any>;
+      reason: REASONS;
+    };
 
 export const linksToMermaid = (result: Link[]) =>
   result.reduce((prev: any, link) => {
+    if (isGroup(link)) {
+      const line = link.end
+        ? "end"
+        : `subgraph ${toId(link.name)} [${link.name}]`;
+      return [...prev, line];
+    }
     if (isFork(link.from)) {
       const fromId = makeId(link.from);
       const toId = makeId(link.to);
@@ -24,16 +39,17 @@ export const linksToMermaid = (result: Link[]) =>
           : link.reason === REASONS.FORK_SKIPPED
           ? "false"
           : "unknown";
+      const arrow = link.reason === REASONS.FORK_SKIPPED ? "-.->" : "-->";
       const reqs = `|${link.from.requirements.join(
         " and "
       )} ${isAre} ${truthy}|`;
 
       if (isEntry(link.to)) {
-        const line = `${fromId} --> ${reqs} ${toId}[${link.to.name}]`;
+        const line = `${fromId} ${arrow} ${reqs} ${toId}[${link.to.name}]`;
         return [...prev, line];
       }
       if (isFork(link.to)) {
-        const line = `${fromId} --> ${reqs} ${toId}{${link.to!.fork}}`;
+        const line = `${fromId} ${arrow} ${reqs} ${toId}{${link.to!.fork}}`;
         return [...prev, line];
       }
       return prev;
@@ -65,7 +81,8 @@ export const makeId = (state: State<any, any, any> | undefined) =>
 export const toName = (state: State<any, any, any> | undefined) =>
   !state ? "undefined" : isFork(state) ? state.fork : state.name;
 
-const toId = (str: string) => str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+export const toId = (str: string) =>
+  str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
 
 /**
  * If found, will return the link in the list of provided links that is a
@@ -82,6 +99,7 @@ export const getExistingSkippedForkLink = (
 ): Link | undefined =>
   result.find(
     (link) =>
+      !isGroup(link) &&
       link.reason === REASONS.FORK_SKIPPED &&
       isFork(from) &&
       makeId(link.from) === makeId(from) &&
@@ -94,16 +112,18 @@ export const getExistingSkippedForkLink = (
  */
 export const deduplicateLinks = (result: Link[]): Link[] =>
   result
-    .filter((link) => makeId(link.from) !== makeId(link.to))
+    .filter((link) => isGroup(link) || makeId(link.from) !== makeId(link.to))
     .filter(
       (link, i: number, acc) =>
+        isGroup(link) ||
         i ===
-        acc.findIndex(
-          (b) =>
-            areStatesIdentical(link.from, b.from) &&
-            areStatesIdentical(link.to, b.to) &&
-            link.reason === b.reason
-        )
+          acc.findIndex(
+            (b) =>
+              !isGroup(b) &&
+              areStatesIdentical(link.from, b.from) &&
+              areStatesIdentical(link.to, b.to) &&
+              link.reason === b.reason
+          )
     );
 
 export const areStatesIdentical = (
@@ -131,13 +151,17 @@ export const areStatesIdentical = (
 export const filterInvalidLinks = (
   states: State<any, any, any>[],
   result: Link[]
-): Link[] =>
-  result.filter((link) => {
-    const orderedIds = accumulateStates(states).map(makeId);
+): Link[] => {
+  const orderedIds = accumulateStates(states).map(makeId);
+  return result.filter((link) => {
+    if (isGroup(link)) {
+      return true;
+    }
     const fromIndex = orderedIds.indexOf(makeId(link.from));
     const toIndex = orderedIds.indexOf(makeId(link.to));
     return fromIndex >= 0 && toIndex >= 0 && fromIndex < toIndex;
   });
+};
 
 /**
  * Takes a list of potentially nested states (if forks are present) and returns
@@ -154,14 +178,18 @@ export const accumulateStates = (
     [] as State<any, any, any>[]
   );
 
+export const isGroup = (link: Link): link is Group => link.type === "group";
+
 export const sortLinks = (links: Link[]): Link[] =>
   links.sort((linkA, linkB) => {
     if (
+      !isGroup(linkA) &&
+      !isGroup(linkB) &&
       linkA.reason === REASONS.FORK_SKIPPED &&
       makeId(linkA.from) === makeId(linkB.from)
     ) {
-      return 1;
+      return 2;
     }
 
-    return -1;
+    return 1;
   });

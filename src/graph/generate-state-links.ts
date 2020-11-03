@@ -7,8 +7,10 @@ import {
   filterInvalidLinks,
   toName,
   makeId,
+  toId,
   getExistingSkippedForkLink,
   sortLinks,
+  isGroup,
 } from "./utils";
 
 /**
@@ -40,11 +42,29 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
       );
       if (isFork(state)) {
         result.push({
+          type: "link",
           from: state,
           to: state.states[0],
           reason: REASONS.FORK_ENTERED,
         });
+        if (state.chartGroup) {
+          result.push({
+            type: "group",
+            name: state.chartGroup,
+            end: false,
+          });
+        }
         run(state.states, nextState || nextStateInParentLevel);
+
+        // TODO: atm this group end is placed after link that the fork's
+        // terminal states link to. It should really be before that link..
+        if (state.chartGroup) {
+          result.push({
+            type: "group",
+            name: state.chartGroup,
+            end: true,
+          });
+        }
         if (nextState || nextStateInParentLevel) {
           const toState = nextState || nextStateInParentLevel;
           const existingSkippedFork = getExistingSkippedForkLink(
@@ -61,6 +81,7 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
             // the skip condition for the fork.
             result.forEach((link) => {
               if (
+                !isGroup(link) &&
                 makeId(link.from) === makeId(state) &&
                 makeId(link.to) === makeId(toState) &&
                 link.reason === REASONS.FORK_SKIPPED
@@ -78,6 +99,7 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
             });
           } else {
             result.push({
+              type: "link",
               from: state,
               to: toState,
               reason: REASONS.FORK_SKIPPED,
@@ -88,6 +110,7 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
       if (isEntry(state) && state.isDone.length > 0) {
         if (nextState || nextStateInParentLevel) {
           result.push({
+            type: "link",
             from: state,
             to: nextState || nextStateInParentLevel,
             reason: REASONS.ENTRY_DONE,
