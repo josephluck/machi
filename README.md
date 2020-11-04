@@ -23,6 +23,24 @@
 
 [![npm version](https://img.shields.io/npm/v/@josephluck/machi.svg?style=flat)](https://www.npmjs.com/package/@josephluck/machi) [![CircleCI Status](https://circleci.com/gh/josephluck/machi.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/josephluck/machi)
 
+## What?
+
+Machi lets you build deterministic state machine driven by data. A Machi machine consists of a list of states and data to determine the next state.
+
+## Why?
+
+Machi is useful to power data-driven flows through a UI where different screens or components are shown depending on information the user has provided.
+
+For example, your app might have a complex onboarding journey whereby the user enters information about themselves through a series of screens, and the screens they see is dependent on the information they provide as they progress through the journey.
+
+Depending on the complexity of the journey and the different variations in the direction of the journey, it can be very difficult to manage imperatively. Machi lets you manage a flow declaratively with conditions that determine the direction based on data.
+
+By declaring states this way, it's possible to evaluate all possible paths through the flow depending on the specified conditions for each state. This has some great benefits:
+
+- As Machi is _deterministic_, a history of the traversed states is built up when a machine is executed. This means it's possible to persist the data and _restore_ the flow from the ground-up at any time. By consequence, it's trivial to support scenarios such as the user quitting the app before they have finished the flow and being able to carry on from where they left off whilst maintaining the history of which states they have been through already. This is particularly useful when restoring a back stack.
+- Machi is able to generate visual flow charts representing your machine. This helps developers, designers and other stakeholders understand the complexity and possible paths through the flow. It also helps visualise _changes_ to the flow as you extend and modify it by giving you confidence that you're not breaking the flow inadvertently.
+- Similarly, since Machi encodes all possible paths through a machine, it's possible to generate tests from the machine which can provide a belts-and-braces testing strategy when combined with traditional unit, integration and end-to-end tests.
+
 ## Installation
 
 ```
@@ -36,8 +54,6 @@ npm i @josephluck/machi --save
 ```
 
 ## Usage
-
-Machi lets you build deterministic state machine driven by data. A Machi machine consists of a list of states and data to determine the next state.
 
 When a Machi machine is "executed" (aka provided with data), it will iterate through all of the states and determine the first Entry that is not considered "done".
 
