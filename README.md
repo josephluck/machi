@@ -70,6 +70,8 @@ A State is a a single node in the machine. It's either an Entry or a Fork.
 
 An Entry is a state in the machine that the machine can resolve when it's Executed. It has a name and a list of predicate conditions that determine whether the Entry is "done". When the machine is Executed and it encounters an Entry it will evaluate it's conditions and if they are all truthy, the machine will add it to the History and evaluate the next State in the machine.
 
+Aside from an Entries name and done conditions, an Entry can contain any additional data.
+
 **Fork**
 
 A Fork is a state in the machine that can be used to separate a series of States based on conditions. It has a name, a list of States and a list of predicate conditions that determine whether the Fork's states will be evaluated. When the machine is Executed and it encounters a Fork it will evaluate it's entry conditions and if they are all truthy, the machine will add it to the History and evaluate the Fork's list of States.
