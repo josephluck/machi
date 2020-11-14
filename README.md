@@ -76,11 +76,13 @@ Aside from an Entries name and done conditions, an Entry can contain any additio
 
 A Fork is a state in the machine that can be used to separate a series of States based on conditions. It has a name, a list of States and a list of predicate conditions that determine whether the Fork's states will be evaluated. When the machine is Executed and it encounters a Fork it will evaluate it's entry conditions and if they are all truthy, the machine will add it to the History and evaluate the Fork's list of States.
 
-**Condition**
+**Conditions and Context**
 
 A condition is a predicate function that can be used as an Entries "done" requirements or Fork's entry requirements.
 
-**Execute**
+Context is passed to a machine when it is Executed. The Context for the machine can be any data type (string, boolean, object, number etc) and will be passed to Condition predicate functions when the machine is Executed. It's important that Condition functions _do not modify the Context in any way_ (this keeps the machine deterministic during execution).
+
+**Execute and History**
 
 A machine can be executed to determine the next Entry. If there are no Entries in the machine that are _not_ done, execute will return a null for the next State. Execute will also return the history of done Entries and entered Forks in the order in which they were evaluated.
 
