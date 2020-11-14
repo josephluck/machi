@@ -25,20 +25,21 @@
 
 ## What?
 
-Machi lets you build deterministic state machine driven by data. A Machi machine consists of a list of states and data to determine the next state.
+Machi lets you build deterministic state machines driven by data. A Machi machine consists of a list of states and data to determine the next state.
 
 ## Why?
 
-Machi is useful to power data-driven flows through a UI where different screens or components are shown depending on information the user has provided.
+Machi is useful to power data-driven flows through a UI where different screens or components are shown depending on information in the machine.
 
-For example, your app might have a complex onboarding journey whereby the user enters information about themselves through a series of screens, and the screens they see is dependent on the information they provide as they progress through the journey.
+For example, your app might have a complex onboarding journey whereby the user enters information through a series of screens, and the screens they see is dependent on the information they provide as they progress through the journey.
 
-Depending on the complexity of the journey and the different variations in the direction of the journey, it can be very difficult to manage imperatively. Machi lets you manage a flow declaratively with conditions that determine the direction based on data.
+Depending on the complexity of the journey and the different variations in the direction of the journey, it can be very difficult to manage transitions imperatively. Machi lets you manage a flow declaratively with conditions that determine the direction based on data.
 
-By declaring states this way, it's possible to evaluate all possible paths through the flow depending on the specified conditions for each state. This has some great benefits:
+By declaring states this way, it's possible to evaluate all possible paths through the flow depending on the specified conditions for each state as well as being able to _restore_ a flow from the ground-up. This has some great benefits:
 
 - As Machi is _deterministic_, a history of the traversed states is built up when a machine is executed. This means it's possible to persist the data and _restore_ the flow from the ground-up at any time. By consequence, it's trivial to support scenarios such as the user quitting the app before they have finished the flow and being able to carry on from where they left off whilst maintaining the history of which states they have been through already. This is particularly useful when restoring a back stack.
-- Machi is able to generate visual flow charts representing your machine. This helps developers, designers and other stakeholders understand the complexity and possible paths through the flow. It also helps visualise _changes_ to the flow as you extend and modify it by giving you confidence that you're not breaking the flow inadvertently.
+- If the data passed to the machine is persisted, it's possible to release updates to the machine (say for example, a new app release) with the machine taking care of the correct state to present to the user when they _restore_ the flow.
+- Machi is able to generate a visual representation of a machine as a flow chart. This helps developers, designers and other stakeholders understand the complexity and possible paths through a machine. It also helps visualise _changes_ to the flow as you extend and modify a machine by giving you confidence that you're not accidentally breaking the flow.
 - Similarly, since Machi encodes all possible paths through a machine, it's possible to generate tests from the machine which can provide a belts-and-braces testing strategy when combined with traditional unit, integration and end-to-end tests.
 
 ## Installation
@@ -52,6 +53,36 @@ Or...
 ```
 npm i @josephluck/machi --save
 ```
+
+## Concepts
+
+Machi has the following core concepts:
+
+**Machine**
+
+A machine is a list of states that are comprised of Entries and Forks. It can be Executed with Context to determine the next Entry.
+
+**State**
+
+A State is a a single node in the machine. It's either an Entry or a Fork.
+
+**Entry**
+
+An Entry is a state in the machine that the machine can resolve when it's Executed. It has a name and a list of predicate conditions that determine whether the Entry is "done". When the machine is Executed and it encounters an Entry it will evaluate it's conditions and if they are all truthy, the machine will add it to the History and evaluate the next State in the machine.
+
+**Fork**
+
+A Fork is a state in the machine that can be used to separate a series of States based on conditions. It has a name, a list of States and a list of predicate conditions that determine whether the Fork's states will be evaluated. When the machine is Executed and it encounters a Fork it will evaluate it's entry conditions and if they are all truthy, the machine will add it to the History and evaluate the Fork's list of States.
+
+**Condition**
+
+A condition is a predicate function that can be used as an Entries "done" requirements or Fork's entry requirements.
+
+**Execute**
+
+A machine can be executed to determine the next Entry. If there are no Entries in the machine that are _not_ done, execute will return a null for the next State. Execute will also return the history of done Entries and entered Forks in the order in which they were evaluated.
+
+It is possible to re-evaluate History with new Context by passing Execute the name of the Entry in History. When Executing like this, the machine will return the immediate next Entry from the History providing the passed Entry exists in the new history. See below for a concrete example.
 
 ## Usage
 
