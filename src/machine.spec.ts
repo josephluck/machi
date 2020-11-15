@@ -5,7 +5,7 @@ describe("state machine", () => {
     const execute = makeMachine(
       [
         {
-          name: "1",
+          id: "1",
           isDone: ["no"],
         },
       ],
@@ -13,7 +13,7 @@ describe("state machine", () => {
     );
 
     const result = execute();
-    expect(result!.entry.name).toEqual("1");
+    expect(result!.entry.id).toEqual("1");
     expect(extractEntries(result!.history).map(toName)).toEqual([]);
   });
 
@@ -21,7 +21,7 @@ describe("state machine", () => {
     const execute = makeMachine(
       [
         {
-          name: "1",
+          id: "1",
           isDone: ["yes", "overrideWithNo"],
         },
       ],
@@ -30,7 +30,7 @@ describe("state machine", () => {
 
     const result = execute();
 
-    expect(result!.entry.name).toEqual("1");
+    expect(result!.entry.id).toEqual("1");
     expect(extractEntries(result!.history).map(toName)).toEqual([]);
   });
 
@@ -38,19 +38,19 @@ describe("state machine", () => {
     const execute = makeMachine<void, {}>(
       [
         {
-          name: "1",
+          id: "1",
           isDone: ["yes"],
         },
         {
-          name: "2",
+          id: "2",
           isDone: ["yes"],
         },
         {
-          name: "3",
+          id: "3",
           isDone: ["yes"],
         },
         {
-          name: "4",
+          id: "4",
           isDone: ["no"],
         },
       ],
@@ -59,7 +59,7 @@ describe("state machine", () => {
 
     const result = execute();
 
-    expect(result!.entry.name).toEqual("4");
+    expect(result!.entry.id).toEqual("4");
     expect(extractEntries(result!.history).map(toName)).toEqual([
       "1",
       "2",
@@ -75,29 +75,29 @@ describe("state machine", () => {
           requirements: ["yes"],
           states: [
             {
-              name: "1",
+              id: "1",
               isDone: ["yes"],
             },
             {
-              name: "2",
+              id: "2",
               isDone: ["yes"],
             },
             {
               fork: "Is No",
               requirements: ["no"],
-              states: [{ name: "3", isDone: ["no"] }], // won't get here as the fork's condition prevents it
+              states: [{ id: "3", isDone: ["no"] }], // won't get here as the fork's condition prevents it
             },
             {
               fork: "Is Yes",
               requirements: ["yes"],
               states: [
-                { name: "4", isDone: ["no"] }, // terminates here as it's the first evaluated entry that is not yet done
-                { name: "5", isDone: ["no"] },
-                { name: "6", isDone: ["no"] },
+                { id: "4", isDone: ["no"] }, // terminates here as it's the first evaluated entry that is not yet done
+                { id: "5", isDone: ["no"] },
+                { id: "6", isDone: ["no"] },
               ],
             },
             {
-              name: "7",
+              id: "7",
               isDone: ["yes"], // won't get here as the terminal state should already be found
             },
           ],
@@ -108,7 +108,7 @@ describe("state machine", () => {
 
     const result = execute();
 
-    expect(result!.entry.name).toEqual("4");
+    expect(result!.entry.id).toEqual("4");
     expect(extractEntries(result!.history).map(toName)).toEqual(["1", "2"]);
   });
 
@@ -120,24 +120,24 @@ describe("state machine", () => {
           requirements: ["yes"],
           states: [
             {
-              name: "1",
+              id: "1",
               isDone: ["yes"],
             },
             {
-              name: "2",
+              id: "2",
               isDone: ["yes"],
             },
             {
               fork: "Is Yes",
               requirements: ["yes"],
               states: [
-                { name: "3", isDone: ["yes"] },
-                { name: "4", isDone: ["yes"] },
-                { name: "5", isDone: ["yes"] },
+                { id: "3", isDone: ["yes"] },
+                { id: "4", isDone: ["yes"] },
+                { id: "5", isDone: ["yes"] },
               ],
             },
             {
-              name: "6",
+              id: "6",
               isDone: ["no"],
             },
           ],
@@ -148,7 +148,7 @@ describe("state machine", () => {
 
     const result = execute();
 
-    expect(result!.entry.name).toEqual("6");
+    expect(result!.entry.id).toEqual("6");
     expect(extractEntries(result!.history).map(toName)).toEqual([
       "1",
       "2",
@@ -166,7 +166,7 @@ describe("state machine", () => {
           requirements: ["no"],
           states: [
             {
-              name: "1",
+              id: "1",
               isDone: ["no"],
             },
           ],
@@ -176,24 +176,24 @@ describe("state machine", () => {
           requirements: ["yes"],
           states: [
             {
-              name: "2",
+              id: "2",
               isDone: ["yes"],
             },
             {
-              name: "3",
+              id: "3",
               isDone: ["yes"],
             },
             {
               fork: "Is Yes",
               requirements: ["yes"],
               states: [
-                { name: "4", isDone: ["yes"] },
-                { name: "5", isDone: ["yes"] },
-                { name: "6", isDone: ["yes"] },
+                { id: "4", isDone: ["yes"] },
+                { id: "5", isDone: ["yes"] },
+                { id: "6", isDone: ["yes"] },
               ],
             },
             {
-              name: "7",
+              id: "7",
               isDone: ["no"],
             },
           ],
@@ -203,7 +203,7 @@ describe("state machine", () => {
           requirements: ["no"],
           states: [
             {
-              name: "8",
+              id: "8",
               isDone: ["no"],
             },
           ],
@@ -214,7 +214,7 @@ describe("state machine", () => {
 
     const result = execute();
 
-    expect(result!.entry.name).toEqual("7");
+    expect(result!.entry.id).toEqual("7");
     expect(extractEntries(result!.history).map(toName)).toEqual([
       "2",
       "3",
@@ -231,23 +231,23 @@ describe("state machine", () => {
           fork: "Is Yes",
           requirements: ["yes"],
           states: [
-            { name: "1", isDone: ["yes"] },
-            { name: "2", isDone: ["maybe"] },
-            { name: "3", isDone: ["no"] },
+            { id: "1", isDone: ["yes"] },
+            { id: "2", isDone: ["maybe"] },
+            { id: "3", isDone: ["no"] },
           ],
         },
-        { name: "4", isDone: ["no"] },
+        { id: "4", isDone: ["no"] },
       ],
       { ...basicConditions, maybe: (isYes) => isYes }
     );
 
     const result = execute(false);
 
-    expect(result!.entry.name).toEqual("2");
+    expect(result!.entry.id).toEqual("2");
     expect(extractEntries(result!.history).map(toName)).toEqual(["1"]);
 
     const next = execute(true);
-    expect(next!.entry.name).toEqual("3");
+    expect(next!.entry.id).toEqual("3");
     expect(extractEntries(next!.history).map(toName)).toEqual(["1", "2"]);
   });
 
@@ -258,23 +258,23 @@ describe("state machine", () => {
           fork: "Is Yes",
           requirements: ["yes"],
           states: [
-            { name: "1", isDone: ["yes"] },
-            { name: "2", isDone: ["maybe"] },
-            { name: "3", isDone: ["no"] },
+            { id: "1", isDone: ["yes"] },
+            { id: "2", isDone: ["maybe"] },
+            { id: "3", isDone: ["no"] },
           ],
         },
-        { name: "4", isDone: ["no"] },
+        { id: "4", isDone: ["no"] },
       ],
       { ...basicConditions, maybe: (isYes) => isYes }
     );
 
     const result = execute(true);
 
-    expect(result!.entry.name).toEqual("3");
+    expect(result!.entry.id).toEqual("3");
     expect(extractEntries(result!.history).map(toName)).toEqual(["1", "2"]);
 
     const next = execute(false);
-    expect(next!.entry.name).toEqual("2");
+    expect(next!.entry.id).toEqual("2");
     expect(extractEntries(next!.history).map(toName)).toEqual(["1"]);
   });
 
@@ -286,28 +286,28 @@ describe("state machine", () => {
           requirements: ["yes"],
           states: [
             {
-              name: "1",
+              id: "1",
               isDone: ["yes"],
             },
             {
               fork: "Yes again",
               requirements: ["yes"],
-              states: [{ name: "2", isDone: ["yes"] }],
+              states: [{ id: "2", isDone: ["yes"] }],
             },
             {
               fork: "Yes again and again",
               requirements: ["yes"],
               states: [
-                { name: "3", isDone: ["yes"] },
+                { id: "3", isDone: ["yes"] },
                 {
                   fork: "No",
                   requirements: ["no"],
-                  states: [{ name: "4", isDone: ["no"] }],
+                  states: [{ id: "4", isDone: ["no"] }],
                 },
               ],
             },
             {
-              name: "5",
+              id: "5",
               isDone: ["no"],
             },
           ],
@@ -326,24 +326,24 @@ describe("state machine", () => {
     ]);
   });
 
-  it.only("progresses through history consecutively when current state name is within history", () => {
+  it.only("progresses through history consecutively when current state id is within history", () => {
     const execute = makeMachine(
       [
         {
           fork: "Is Yes",
           requirements: ["yes"],
           states: [
-            { name: "1", isDone: ["yes"] },
+            { id: "1", isDone: ["yes"] },
             {
               fork: "Is Yes",
               requirements: ["yes"],
               states: [
-                { name: "2", isDone: ["yes"] },
-                { name: "3", isDone: ["yes"] },
-                { name: "4", isDone: ["no"] },
+                { id: "2", isDone: ["yes"] },
+                { id: "3", isDone: ["yes"] },
+                { id: "4", isDone: ["no"] },
               ],
             },
-            { name: "5", isDone: ["no"] },
+            { id: "5", isDone: ["no"] },
           ],
         },
       ],
@@ -353,34 +353,34 @@ describe("state machine", () => {
     const result = execute();
 
     const retainedHistory = ["1", "2", "3"];
-    expect(result!.entry.name).toEqual("4");
+    expect(result!.entry.id).toEqual("4");
     expect(extractEntries(result!.history).map(toName)).toEqual(
       retainedHistory
     );
 
     const next = execute(void null, "2");
-    expect(next!.entry.name).toEqual("3");
+    expect(next!.entry.id).toEqual("3");
     expect(extractEntries(next!.history).map(toName)).toEqual(retainedHistory);
   });
 
-  it("doesn't progress through history when current state name is within history, but the context has changed the flow", () => {
+  it("doesn't progress through history when current state id is within history, but the context has changed the flow", () => {
     const execute = makeMachine<boolean, {}>(
       [
         {
           fork: "Is Yes",
           requirements: ["yes"],
           states: [
-            { name: "1", isDone: ["yes"] },
+            { id: "1", isDone: ["yes"] },
             {
               fork: "Maybe",
               requirements: ["maybe"],
               states: [
-                { name: "2", isDone: ["yes"] },
-                { name: "3", isDone: ["yes"] },
-                { name: "4", isDone: ["no"] },
+                { id: "2", isDone: ["yes"] },
+                { id: "3", isDone: ["yes"] },
+                { id: "4", isDone: ["no"] },
               ],
             },
-            { name: "5", isDone: ["no"] },
+            { id: "5", isDone: ["no"] },
           ],
         },
       ],
@@ -390,13 +390,13 @@ describe("state machine", () => {
     const result = execute(true);
 
     const retainedHistory = ["1", "2", "3"];
-    expect(result!.entry.name).toEqual("4");
+    expect(result!.entry.id).toEqual("4");
     expect(extractEntries(result!.history).map(toName)).toEqual(
       retainedHistory
     );
 
     const next = execute(false, "1");
-    expect(next!.entry.name).toEqual("5");
+    expect(next!.entry.id).toEqual("5");
     expect(extractEntries(next!.history).map(toName)).not.toEqual(
       retainedHistory
     );
@@ -407,7 +407,7 @@ describe("state machine", () => {
     const execute = makeMachine<void, { additional: { data: string } }>(
       [
         {
-          name: "1",
+          id: "1",
           isDone: ["no"],
           additional: {
             data: "works",
@@ -418,7 +418,7 @@ describe("state machine", () => {
     );
 
     const result = execute();
-    expect(result!.entry.name).toEqual("1");
+    expect(result!.entry.id).toEqual("1");
     expect(result!.entry.additional).toEqual({ data: "works" });
   });
 });
@@ -434,4 +434,4 @@ const extractEntries = (states: State<any, any, {}>[]): Entry<any, any, {}>[] =>
   states.filter(isEntry) as Entry<any, any, {}>[];
 
 const toName = (state: State<any, any, {}>) =>
-  isEntry(state) ? state.name : state.fork;
+  isEntry(state) ? state.id : state.fork;

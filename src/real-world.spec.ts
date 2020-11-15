@@ -15,45 +15,45 @@ describe("free beer example", () => {
   const execute = makeMachine<Context, {}>(
     [
       {
-        name: "How old are you?",
+        id: "How old are you?",
         isDone: ["hasEnteredAge"],
       },
       {
         fork: "Is old enough",
         requirements: ["isOfLegalDrinkingAge"],
         states: [
-          { name: "What's your name?", isDone: ["hasEnteredName"] },
-          { name: "What's your postcode?", isDone: ["hasEnteredAddress"] },
+          { id: "What's your name?", isDone: ["hasEnteredName"] },
+          { id: "What's your postcode?", isDone: ["hasEnteredAddress"] },
           {
             fork: "Bypassed postcode lookup",
             requirements: ["hasBypassedPostcodeLookup"],
             states: [
               {
-                name: "What's your address?",
+                id: "What's your address?",
                 isDone: ["hasEnteredAddress"],
               },
             ],
           },
-          { name: "What's your job title?", isDone: ["hasEnteredJobTitle"] },
-          { name: "What's your salary?", isDone: ["hasEnteredSalary"] },
+          { id: "What's your job title?", isDone: ["hasEnteredJobTitle"] },
+          { id: "What's your salary?", isDone: ["hasEnteredSalary"] },
           {
             fork: "If you're rich?",
             requirements: ["isRich"],
             states: [
               {
-                name: "Sorry, you're to rich for free beer",
+                id: "Sorry, you're to rich for free beer",
                 isDone: ["no"],
               },
             ],
           },
-          { name: "Yay! You can have free beer", isDone: ["no"] },
+          { id: "Yay! You can have free beer", isDone: ["no"] },
         ],
       },
       {
         fork: "Is too young",
         requirements: ["isTooYoung"],
         states: [
-          { name: "Sorry, you're too young for free beer", isDone: ["no"] },
+          { id: "Sorry, you're too young for free beer", isDone: ["no"] },
         ],
       },
     ],
@@ -74,7 +74,7 @@ describe("free beer example", () => {
 
   it("initialises", () => {
     const result = execute(initialContext);
-    expect(result!.entry.name).toEqual("How old are you?");
+    expect(result!.entry.id).toEqual("How old are you?");
   });
 
   it("exits early if the applicant is too young", () => {
@@ -82,15 +82,15 @@ describe("free beer example", () => {
     expect(extractEntries(result!.history).map(toName)).toEqual([
       "How old are you?",
     ]);
-    expect(result!.entry.name).toEqual("Sorry, you're too young for free beer");
+    expect(result!.entry.id).toEqual("Sorry, you're too young for free beer");
   });
 
-  it("asks for the applicants name", () => {
+  it("asks for the applicants id", () => {
     const result = execute({ ...initialContext, age: 22 });
     expect(extractEntries(result!.history).map(toName)).toEqual([
       "How old are you?",
     ]);
-    expect(result!.entry.name).toEqual("What's your name?");
+    expect(result!.entry.id).toEqual("What's your name?");
   });
 
   it("asks for the applicants postcode", () => {
@@ -103,7 +103,7 @@ describe("free beer example", () => {
       "How old are you?",
       "What's your name?",
     ]);
-    expect(result!.entry.name).toEqual("What's your postcode?");
+    expect(result!.entry.id).toEqual("What's your postcode?");
   });
 
   it("skips over the address section if the postcode lookup was used to enter the address", () => {
@@ -118,7 +118,7 @@ describe("free beer example", () => {
       "What's your name?",
       "What's your postcode?",
     ]);
-    expect(result!.entry.name).toEqual("What's your job title?");
+    expect(result!.entry.id).toEqual("What's your job title?");
   });
 
   it("asks for the applicant's address section if the postcode lookup was bypassed", () => {
@@ -133,7 +133,7 @@ describe("free beer example", () => {
       "What's your name?",
       // TODO: should postcode be here?
     ]);
-    expect(result!.entry.name).toEqual("What's your address?");
+    expect(result!.entry.id).toEqual("What's your address?");
   });
 
   it("progresses after bypassing postcode lookup and entering address", () => {
@@ -150,7 +150,7 @@ describe("free beer example", () => {
       "What's your postcode?",
       "What's your address?",
     ]);
-    expect(result!.entry.name).toEqual("What's your job title?");
+    expect(result!.entry.id).toEqual("What's your job title?");
   });
 
   it("asks for the applicant's salary", () => {
@@ -167,7 +167,7 @@ describe("free beer example", () => {
       "What's your postcode?",
       "What's your job title?",
     ]);
-    expect(result!.entry.name).toEqual("What's your salary?");
+    expect(result!.entry.id).toEqual("What's your salary?");
   });
 
   it("tells the applicant they're too rich", () => {
@@ -186,7 +186,7 @@ describe("free beer example", () => {
       "What's your job title?",
       "What's your salary?",
     ]);
-    expect(result!.entry.name).toEqual("Sorry, you're to rich for free beer");
+    expect(result!.entry.id).toEqual("Sorry, you're to rich for free beer");
   });
 
   it("gives the applicant free beer", () => {
@@ -205,7 +205,7 @@ describe("free beer example", () => {
       "What's your job title?",
       "What's your salary?",
     ]);
-    expect(result!.entry.name).toEqual("Yay! You can have free beer");
+    expect(result!.entry.id).toEqual("Yay! You can have free beer");
   });
 
   it.skip("progresses through history from start to finish", () => {
@@ -227,9 +227,9 @@ describe("free beer example", () => {
     history.forEach((item, i) => {
       const result = execute(ctx, item);
       if (i === history.length - 1) {
-        expect(result!.entry.name).toEqual("Yay! You can have free beer");
+        expect(result!.entry.id).toEqual("Yay! You can have free beer");
       } else {
-        expect(result!.entry.name).toEqual(history[i + 1]);
+        expect(result!.entry.id).toEqual(history[i + 1]);
       }
       expect(extractEntries(result!.history).map(toName)).toEqual(history);
     });
@@ -244,8 +244,8 @@ describe("free beer example", () => {
       jobTitle: "Bartender",
     };
     const initial = execute(ctx);
-    const result = execute({ ...ctx, age: 10 }, initial!.entry.name);
-    expect(result!.entry.name).toEqual("Sorry, you're too young for free beer");
+    const result = execute({ ...ctx, age: 10 }, initial!.entry.id);
+    expect(result!.entry.id).toEqual("Sorry, you're too young for free beer");
     expect(extractEntries(result!.history).map(toName)).toEqual([
       "How old are you?",
     ]);
@@ -255,4 +255,4 @@ describe("free beer example", () => {
 const extractEntries = (states: State<any, any, {}>[]): Entry<any, any, {}>[] =>
   states.filter(isEntry) as Entry<any, any, {}>[];
 
-const toName = (entry: Entry<any, any, {}>) => entry.name;
+const toName = (entry: Entry<any, any, {}>) => entry.id;

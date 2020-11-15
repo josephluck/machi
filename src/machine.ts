@@ -11,14 +11,14 @@ export type Entry<
       /**
        * Must be unique within the context of a machine
        */
-      name: string;
+      id: string;
       isDone: (keyof Conditions)[];
     }
   : AdditionalEntryData & {
       /**
        * Must be unique within the context of a machine
        */
-      name: string;
+      id: string;
       isDone: (keyof Conditions)[];
     };
 
@@ -106,37 +106,47 @@ export const makeMachine = <
     context: Context,
     currentEntryName: string | undefined,
     _states: State<Context, Conditions, AdditionalEntryData>[] = [],
-    _history: State<Context, Conditions, AdditionalEntryData>[] = [],
-    _evaluatedConditions = evaluateConditions(context),
-    _entryInHistory:
+    history: State<Context, Conditions, AdditionalEntryData>[] = [],
+    evaluatedConditions = evaluateConditions(context),
+    entryInHistory:
       | Entry<Context, Conditions, AdditionalEntryData>
       | undefined = undefined
   ): InternalExecuteResult | undefined => {
     const result = _states.reduce((entryFoundInCurrentLevel, state) => {
-      if (isForkEntered(state, _evaluatedConditions)) {
-        _history.push(state);
+      if (isForkEntered(state, evaluatedConditions)) {
+        history.push(state);
         return process(
           context,
           currentEntryName,
           state.states,
-          _history,
-          _evaluatedConditions,
-          _entryInHistory
+          history,
+          evaluatedConditions,
+          entryInHistory
         );
       }
 
       if (entryFoundInCurrentLevel) {
-        const _entriesInHistory = _history.filter(isEntry);
-        if (currentEntryName && _entriesInHistory.length) {
-          const currentIndexInHistory = _entriesInHistory.findIndex(
-            (s) => isEntry(s) && s.name === currentEntryName
+        /**
+         * We're trying to find the next closest entry to the entry id passed
+         * in to execute. This means the entire state tree will be evaluated as
+         * normal, but we'll provide the next closest entry rather than the last
+         * entry in the resultant history.
+         * NB: important to still return the full history as normal. For use
+         * cases such as traversing back and forth through a navigation back
+         * stack.
+         */
+        const entriesInHistory = history.filter(isEntry);
+        if (currentEntryName && entriesInHistory.length) {
+          const currentIndexInHistory = entriesInHistory.findIndex(
+            (s) => isEntry(s) && s.id === currentEntryName
           );
-          const entryInHistory = _entriesInHistory[currentIndexInHistory + 1];
+          const nextEntryInHistory =
+            entriesInHistory[currentIndexInHistory + 1];
 
-          return entryInHistory && isEntry(entryInHistory)
+          return nextEntryInHistory && isEntry(nextEntryInHistory)
             ? {
                 ...entryFoundInCurrentLevel,
-                entryInHistory,
+                entryInHistory: nextEntryInHistory,
               }
             : entryFoundInCurrentLevel;
         }
@@ -144,15 +154,15 @@ export const makeMachine = <
         return entryFoundInCurrentLevel;
       }
 
-      if (isEntryDone(state, _evaluatedConditions)) {
-        _history.push(state);
+      if (isEntryDone(state, evaluatedConditions)) {
+        history.push(state);
       }
 
-      if (isEntryNext(state, _evaluatedConditions)) {
+      if (isEntryNext(state, evaluatedConditions)) {
         return {
           entry: state,
-          history: _history,
-          entryInHistory: _entryInHistory,
+          history,
+          entryInHistory,
         };
       }
     }, undefined as InternalExecuteResult | undefined);
@@ -163,7 +173,7 @@ export const makeMachine = <
   /**
    * Evaluate the next context in the machine given a new state.
    *
-   * Provide a current entry name to return the entry immediately after the
+   * Provide a current entry id to return the entry immediately after the
    * provided entry in the history stack.
    */
   const execute = (
@@ -234,7 +244,7 @@ export const isFork = <
   typeof state === "object" &&
   state.hasOwnProperty("fork") &&
   state.hasOwnProperty("states") &&
-  !state.hasOwnProperty("name");
+  !state.hasOwnProperty("id");
 
 export const isEntry = <
   Context extends any,
@@ -257,7 +267,7 @@ export const isForkEntered = <
   evaluatedConditions: Record<keyof Conditions, boolean>
 ): state is Fork<Context, Conditions, AdditionalEntryData> =>
   isFork<Context, Conditions, AdditionalEntryData>(state) &&
-  state.requirements.every((name) => evaluatedConditions[name]);
+  state.requirements.every((id) => evaluatedConditions[id]);
 
 /**
  * Returns a boolean representing whether the provided state is an entry state
@@ -272,7 +282,7 @@ export const isEntryDone = <
   evaluatedConditions: Record<keyof Conditions, boolean>
 ): state is Entry<Context, Conditions, AdditionalEntryData> =>
   isEntry<Context, Conditions, AdditionalEntryData>(state) &&
-  state.isDone.every((name) => evaluatedConditions[name]);
+  state.isDone.every((key) => evaluatedConditions[key]);
 
 /**
  * Returns a boolean representing whether the provided state is an entry state
@@ -288,4 +298,4 @@ export const isEntryNext = <
   evaluatedConditions: Record<keyof Conditions, boolean>
 ): state is Entry<Context, Conditions, AdditionalEntryData> =>
   isEntry<Context, Conditions, AdditionalEntryData>(state) &&
-  state.isDone.some((name) => !evaluatedConditions[name]);
+  state.isDone.some((key) => !evaluatedConditions[key]);

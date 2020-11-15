@@ -68,13 +68,13 @@ A State is a a single node in the machine. It's either an Entry or a Fork.
 
 **Entry**
 
-An Entry is a state in the machine that the machine can resolve when it's Executed. It has a name and a list of predicate conditions that determine whether the Entry is "done". When the machine is Executed and it encounters an Entry it will evaluate it's conditions and if they are all truthy, the machine will add it to the History and evaluate the next State in the machine.
+An Entry is a state in the machine that the machine can resolve when it's Executed. It has a id and a list of predicate conditions that determine whether the Entry is "done". When the machine is Executed and it encounters an Entry it will evaluate it's conditions and if they are all truthy, the machine will add it to the History and evaluate the next State in the machine.
 
-Aside from an Entries name and done conditions, an Entry can contain any additional data.
+Aside from an Entries id and done conditions, an Entry can contain any additional data.
 
 **Fork**
 
-A Fork is a state in the machine that can be used to separate a series of States based on conditions. It has a name, a list of States and a list of predicate conditions that determine whether the Fork's states will be evaluated. When the machine is Executed and it encounters a Fork it will evaluate it's entry conditions and if they are all truthy, the machine will add it to the History and evaluate the Fork's list of States.
+A Fork is a state in the machine that can be used to separate a series of States based on conditions. It has a id, a list of States and a list of predicate conditions that determine whether the Fork's states will be evaluated. When the machine is Executed and it encounters a Fork it will evaluate it's entry conditions and if they are all truthy, the machine will add it to the History and evaluate the Fork's list of States.
 
 **Conditions and Context**
 
@@ -86,7 +86,7 @@ Context is passed to a machine when it is Executed. The Context for the machine 
 
 A machine can be executed to determine the next Entry. If there are no Entries in the machine that are _not_ done, execute will return a null for the next State. Execute will also return the history of done Entries and entered Forks in the order in which they were evaluated.
 
-It is possible to re-evaluate History with new Context by passing Execute the name of the Entry in History. When Executing like this, the machine will return the immediate next Entry from the History providing the passed Entry exists in the new history. See below for a concrete example.
+It is possible to re-evaluate History with new Context by passing Execute the id of the Entry in History. When Executing like this, the machine will return the immediate next Entry from the History providing the passed Entry exists in the new history. See below for a concrete example.
 
 ## Usage
 
@@ -105,11 +105,11 @@ type Context = {
 const execute = makeMachine<Context>(
   [
     {
-      name: "What's your name",
+      id: "What's your name",
       isDone: ["hasProvidedName"],
     },
     {
-      name: "And your age?",
+      id: "And your age?",
       isDone: ["hasProvidedAge"],
     },
     {
@@ -117,7 +117,7 @@ const execute = makeMachine<Context>(
       requirements: ["isOfLegalDrinkingAge"],
       states: [
         {
-          name: "Great, you can have free beer!",
+          id: "Great, you can have free beer!",
           isDone: [],
         },
       ],
@@ -127,7 +127,7 @@ const execute = makeMachine<Context>(
       requirements: ["isTooYoung"],
       states: [
         {
-          name: "Sorry, you're too young for free beer",
+          id: "Sorry, you're too young for free beer",
           isDone: [],
         },
       ],
@@ -145,25 +145,25 @@ console.log(execute({
   name: undefined,
   age: undefined,
 }));
-// --> What's your name
+// --> { entry: { id: "What's your name", ... }, history: [ ... ] }
 
 console.log(execute({
   name: "Joseph Luck",
   age: undefined,
 }));
-// --> { entry: { name: "What's your age", ... }, history: [ ... ] }
+// --> { entry: { id: "What's your age", ... }, history: [ ... ] }
 
 console.log(execute({
   name: "Joseph Luck",
   age: 14,
 }));
-// --> { entry: { name: "Sorry, you're too young for free beer", ... }, history: [ ... ] }
+// --> { entry: { id: "Sorry, you're too young for free beer", ... }, history: [ ... ] }
 
 console.log(execute({
   name: "Joseph Luck",
   age: 36,
 }));
-// --> { entry: { name: "Great, you can have free beer!", ... }, history: [ ... ] }
+// --> { entry: { id: "Great, you can have free beer!", ... }, history: [ ... ] }
 ```
 
 This simple machine results in the following flow:
@@ -190,10 +190,10 @@ console.log(
   })
 );
 // {
-//   entry: { name: "Great, you can have free beer!" },
+//   entry: { id: "Great, you can have free beer!" },
 //   history: [
-//     { name: "What's your name" },
-//     { name: "What's your age" },
+//     { id: "What's your id" },
+//     { id: "What's your age" },
 //     { fork: "Old enough to drink?" },
 //   ]
 // }
@@ -218,16 +218,16 @@ console.log(
   )
 );
 // {
-//   entry: { name: "What's your age" },
+//   entry: { id: "What's your age" },
 //   history: [
-//     { name: "What's your name" },
-//     { name: "What's your age" },
+//     { id: "What's your name" },
+//     { id: "What's your age" },
 //     { fork: "Old enough to drink?" },
 //   ]
 // }
 ```
 
-In this example, although the age entry's `isDone` is satisfied it is returned as it's the entry to the name entry (which has been passed in as the current state during execution) in the history.
+In this example, although the age entry's `isDone` is satisfied it is returned as it's the entry next to the name entry (which has been passed in as the current state during execution) in the history.
 
 You'll notice that the history includes all satisfied Entries and Forks regardless of whether it's traversing through history or not.
 
@@ -237,7 +237,7 @@ The second argument to Machi is an object of condition functions that are referr
 
 ### Extra Entry data
 
-By default Entries are expected to provide a `name` and a list of `isDone` conditions, however to provide extra utility Entries can specify arbitrary additional data. For example:
+By default Entries are expected to provide a `id` and a list of `isDone` conditions, however to provide extra utility Entries can specify arbitrary additional data. For example:
 
 ```typescript
 type Context = {
@@ -252,12 +252,12 @@ type AdditionalEntryData = {
 const execute = makeMachine<Context, AdditionalEntryData>(
   [
     {
-      name: "What's your name",
+      id: "What's your name",
       isDone: ["hasProvidedName"],
       screen: NameScreen,
     },
     {
-      name: "And your age?",
+      id: "And your age?",
       isDone: ["hasProvidedAge"],
       screen: AgeScreen,
     },
@@ -266,7 +266,7 @@ const execute = makeMachine<Context, AdditionalEntryData>(
       requirements: ["isOfLegalDrinkingAge"],
       states: [
         {
-          name: "Great, you can have free beer!",
+          id: "Great, you can have free beer!",
           isDone: [],
           screen: FreeBeerScreen,
         },
@@ -277,7 +277,7 @@ const execute = makeMachine<Context, AdditionalEntryData>(
       requirements: ["isTooYoung"],
       states: [
         {
-          name: "Sorry, you're too young for free beer",
+          id: "Sorry, you're too young for free beer",
           isDone: [],
           screen: TooYoungScreen,
         },
@@ -305,12 +305,12 @@ The tool expects you to provide a JavaScript file (when using node) or a TypeScr
 // path/to/my/states.ts
 const states = [
   {
-    name: "What's your name",
+    id: "What's your name",
     isDone: ["hasProvidedName"],
     screen: NameScreen,
   },
   {
-    name: "And your age?",
+    id: "And your age?",
     isDone: ["hasProvidedAge"],
     screen: AgeScreen,
   },

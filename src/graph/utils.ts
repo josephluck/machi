@@ -9,7 +9,7 @@ export enum REASONS {
 type Group = {
   type: "group";
   end: boolean;
-  name: string;
+  id: string;
 };
 
 export type Link =
@@ -24,9 +24,7 @@ export type Link =
 export const linksToMermaid = (result: Link[]) =>
   result.reduce((prev: any, link) => {
     if (isGroup(link)) {
-      const line = link.end
-        ? "end"
-        : `subgraph ${toId(link.name)} [${link.name}]`;
+      const line = link.end ? "end" : `subgraph ${toId(link.id)} [${link.id}]`;
       return [...prev, line];
     }
     if (isFork(link.from)) {
@@ -45,7 +43,7 @@ export const linksToMermaid = (result: Link[]) =>
       )} ${isAre} ${truthy}|`;
 
       if (isEntry(link.to)) {
-        const line = `${fromId} ${arrow} ${reqs} ${toId}[${link.to.name}]`;
+        const line = `${fromId} ${arrow} ${reqs} ${toId}[${link.to.id}]`;
         return [...prev, line];
       }
       if (isFork(link.to)) {
@@ -61,12 +59,12 @@ export const linksToMermaid = (result: Link[]) =>
       const isAre = link.from.isDone.length > 1 ? "are" : "is";
       if (isEntry(link.to)) {
         const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
-        const line = `${fromId}[${link.from.name}] --> ${reqs} ${toId}[${link.to.name}]`;
+        const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}[${link.to.id}]`;
         return [...prev, line];
       }
       if (isFork(link.to)) {
         const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
-        const line = `${fromId}[${link.from.name}] --> ${reqs} ${toId}{${
+        const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}{${
           link.to!.fork
         }}`;
         return [...prev, line];
@@ -76,10 +74,10 @@ export const linksToMermaid = (result: Link[]) =>
   }, []);
 
 export const makeId = (state: State<any, any, any> | undefined) =>
-  !state ? "undefined" : isFork(state) ? toId(state.fork) : toId(state.name);
+  !state ? "undefined" : isFork(state) ? toId(state.fork) : toId(state.id);
 
 export const toName = (state: State<any, any, any> | undefined) =>
-  !state ? "undefined" : isFork(state) ? state.fork : state.name;
+  !state ? "undefined" : isFork(state) ? state.fork : state.id;
 
 export const toId = (str: string) =>
   str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();

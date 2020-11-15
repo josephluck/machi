@@ -35,7 +35,7 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
         /**
          * This ensures that the next state link does not belong to the same
          * fork as the current fork (even though the machine will re-evaluate
-         * sibling forks of the same name, their requirements should always be
+         * sibling forks of the same id, their requirements should always be
          * mutually exclusive)
          */
         (s, ix) => ix > i && makeId(s) !== makeId(state)
@@ -50,7 +50,7 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
         if (state.chartGroup) {
           result.push({
             type: "group",
-            name: state.chartGroup,
+            id: state.chartGroup,
             end: false,
           });
         }
@@ -61,7 +61,7 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
         if (state.chartGroup) {
           result.push({
             type: "group",
-            name: state.chartGroup,
+            id: state.chartGroup,
             end: true,
           });
         }
@@ -137,9 +137,26 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
   return sortedLinks;
 };
 
-export const generateMermaid = (states: State<any, any, {}>[]) => {
+type Theme = {
+  darkMode: boolean;
+  primaryColor: string;
+};
+
+const darkTheme: Theme = {
+  darkMode: true,
+  primaryColor: "#777777",
+};
+
+export const generateMermaid = (
+  states: State<any, any, {}>[],
+  theme: Theme = darkTheme
+) => {
   const links = generateStateLinks(states);
   const mermaidLines = linksToMermaid(links);
+  const themeLine = `%%{init: ${JSON.stringify({
+    theme: "base",
+    themeVariables: theme,
+  })}}%%`;
 
-  return `graph TD\n${mermaidLines.join("\n")}`;
+  return `${themeLine}\ngraph TD\n${mermaidLines.join("\n")}`;
 };
