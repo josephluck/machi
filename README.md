@@ -320,20 +320,24 @@ const states = [
 export default states;
 ```
 
-Using node:
+In order to run the generation, you must have `ts-node` installed globally on your machine:
 
 ```bash
-node ./node_modules/@josephluck/machi/chart.js --states ./path/to/my/states.js --output ./path/to/my/output.svg
+yarn global add ts-node
 ```
-
-Using TypeScript
 
 ```bash
-yarn add ts-node
-
-ts-node ./node_modules/@josephluck/machi/chart.js --states ./path/to/my/states.ts --output ./path/to/my/output.svg
+yarn install -g ts-node
 ```
 
-- `--states` is the path relative to your current working directory (where you ran the chart tool from) to your file containing a default export of your states.
-- `--output` is the path relative to your current working directory (where you ran the chart tool from) to where you wish to output the generated flow chart.
-- `--direction` can either be "horizontal" or "vertical" (defaults to vertical) which is used to control the direction of the generated flow chart.
+Then, you're able to run the generation
+
+```bash
+ts-node ./node_modules/@josephluck/machi/src/graph/generate-chart.ts --states ./path/to/my/states.ts --output ./path/to/my/output.svg
+```
+
+For all the options, run the help script:
+
+```bash
+ts-node ./node_modules/@josephluck/machi/src/graph/generate-chart.ts --help
+```
