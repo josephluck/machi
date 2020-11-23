@@ -7,3 +7,6 @@ coverage.json
 *.swp
 lib/
 examples/react/src/lib
+graph.svg
+graph.pdf
+graph.png

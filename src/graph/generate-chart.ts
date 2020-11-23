@@ -43,6 +43,12 @@ const options = yargs(process.argv.slice(2)).options({
     default: "dark",
     description: "The theme of the generated chart",
   },
+  nodeModulesPath: {
+    type: "string",
+    default: "../../node_modules",
+    description:
+      "Optional path to node_modules (where you may have installed @mermaid-js/mermaid-cli). The default should work, but you may pass a specific path to your node_modules if you run in to difficulty with the default in yarn / lerna mono-repositories.",
+  },
 }).argv;
 
 const readStatesFromFile = (): State<any, any, {}>[] => {
@@ -81,7 +87,8 @@ const writeMermaidSvg = async (tempFilePath: string) => {
   const localMmdc = async () => {
     const mermaidExecutable = path.join(
       __dirname,
-      "../../node_modules/.bin/mmdc"
+      options.nodeModulesPath,
+      ".bin/mmdc"
     );
     await execa(mermaidExecutable, flatten(mermaidArgs));
     return outputPath;
