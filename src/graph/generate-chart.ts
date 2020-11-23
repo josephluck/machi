@@ -17,11 +17,32 @@ const directionChoice: ReadonlyArray<Direction> = ["vertical", "horizontal"];
 type Theme = "dark" | "light";
 const themeChoice: ReadonlyArray<Theme> = ["dark", "light"];
 
+const supportedExtensions = ["pdf", "svg", "png"];
+
 const options = yargs(process.argv.slice(2)).options({
-  states: { type: "string", demandOption: true },
-  output: { type: "string", demandOption: true },
-  direction: { choices: directionChoice, default: "vertical" },
-  theme: { choices: themeChoice, default: "dark" },
+  states: {
+    type: "string",
+    demandOption: true,
+    description:
+      'Path to the file containing your states export. Note that this file MUST export your states array as the default export, or as a named export under the "states" export. The path is relative to the working directory this script is run from.',
+  },
+  output: {
+    type: "string",
+    demandOption: true,
+    description: `Path to the output file the generated chart will be saved to including the extension. ${supportedExtensions.join(
+      ", "
+    )} extensions are supported. The path is relative to the working directory this script is run from.`,
+  },
+  direction: {
+    choices: directionChoice,
+    default: "vertical",
+    description: "The direction of the generated chart",
+  },
+  theme: {
+    choices: themeChoice,
+    default: "dark",
+    description: "The theme of the generated chart",
+  },
 }).argv;
 
 const readStatesFromFile = (): State<any, any, {}>[] => {
@@ -93,7 +114,6 @@ const writeMermaidSvg = async (tempFilePath: string) => {
 const validateOutputExtension = () => {
   const parts = options.output.split(".");
   const extension = parts[parts.length - 1];
-  const supportedExtensions = ["pdf", "svg", "png"];
 
   if (!supportedExtensions.includes(extension)) {
     throw new Error(
