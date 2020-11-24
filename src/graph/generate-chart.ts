@@ -7,7 +7,7 @@ import execa from "execa";
 import yargs from "yargs/yargs";
 
 import { State } from "../machine";
-import { generateMermaid } from "./generate-state-links";
+import { darkTheme, generateMermaid, lightTheme } from "./generate-state-links";
 
 const spinner = makeSpinner();
 
@@ -35,12 +35,12 @@ const options = yargs(process.argv.slice(2)).options({
   },
   direction: {
     choices: directionChoice,
-    default: "vertical",
+    default: "vertical" as Direction,
     description: "The direction of the generated chart",
   },
   theme: {
     choices: themeChoice,
-    default: "dark",
+    default: "light" as Theme,
     description: "The theme of the generated chart",
   },
   nodeModulesPath: {
@@ -82,6 +82,10 @@ const writeMermaidSvg = async (tempFilePath: string) => {
   const mermaidArgs = [
     ["-i", tempFilePath],
     ["-o", outputPath],
+    [
+      "-b",
+      options.theme === "dark" ? darkTheme.background : lightTheme.background,
+    ],
   ];
 
   const localMmdc = async () => {
@@ -136,7 +140,10 @@ const run = async () => {
     spinner.start("Generating chart");
     validateOutputExtension();
     const states = readStatesFromFile();
-    const mermaid = generateMermaid(states);
+    const mermaid = generateMermaid(states, {
+      theme: options.theme === "dark" ? darkTheme : lightTheme,
+      direction: options.direction,
+    });
     const tempFilePath = writeTempFile(mermaid);
     const outputPath = await writeMermaidSvg(tempFilePath);
     fs.unlinkSync(tempFilePath);

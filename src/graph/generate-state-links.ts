@@ -139,17 +139,50 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
 
 type Theme = {
   darkMode: boolean;
+  background: string;
   primaryColor: string;
+  secondaryColor: string;
+  tertiaryColor: string;
+  noteBkgColor: string;
+  mainBkg: string;
+  lineColor: string;
+  edgeLabelBackground: string;
 };
 
-const darkTheme: Theme = {
+export const darkTheme: Theme = {
   darkMode: true,
-  primaryColor: "#777777",
+  background: "#000000",
+  primaryColor: "#444444",
+  secondaryColor: "#888888",
+  tertiaryColor: "#111111",
+  noteBkgColor: "transparent",
+  mainBkg: "#222222",
+  lineColor: "#666666",
+  edgeLabelBackground: "transparent",
+};
+
+export const lightTheme: Theme = {
+  darkMode: false,
+  background: "#ffffff",
+  primaryColor: "#aaaaaa",
+  secondaryColor: "#999999",
+  tertiaryColor: "#f8f8f8",
+  noteBkgColor: "transparent",
+  mainBkg: "#eeeeee",
+  lineColor: "#555555",
+  edgeLabelBackground: "transparent",
+};
+
+type Direction = "horizontal" | "vertical";
+
+type Options = {
+  theme?: Theme;
+  direction?: Direction;
 };
 
 export const generateMermaid = (
   states: State<any, any, {}>[],
-  theme: Theme = darkTheme
+  { theme = darkTheme, direction = "vertical" }: Options = {}
 ) => {
   const links = generateStateLinks(states);
   const mermaidLines = linksToMermaid(links);
@@ -158,5 +191,7 @@ export const generateMermaid = (
     themeVariables: theme,
   })}}%%`;
 
-  return `${themeLine}\ngraph TD\n${mermaidLines.join("\n")}`;
+  const directionMermaid = direction === "horizontal" ? "LR" : "TD";
+
+  return `${themeLine}\ngraph ${directionMermaid}\n${mermaidLines.join("\n")}`;
 };
