@@ -123,21 +123,14 @@ const execute = makeMachine<Context>(
       ],
     },
     {
-      fork: "Old enough to drink?",
-      requirements: ["isTooYoung"],
-      states: [
-        {
-          id: "Sorry, you're too young for free beer",
-          isDone: [],
-        },
-      ],
+      id: "Sorry, you're too young for free beer",
+      isDone: [],
     },
   ],
   {
     hasProvidedName: (context) => !!context.name,
     hasProvidedAge: (context) => !!context.age,
     isOfLegalDrinkingAge: (context) => context.age >= 18,
-    isTooYoung: (context) => context.age < 18,
   }
 ));
 
@@ -169,6 +162,8 @@ console.log(execute({
 This simple machine results in the following flow:
 
 ![simple flow](https://github.com/josephluck/machi/blob/master/screenshots/simple-machine.png?raw=true)
+
+> Note that this graphic was created from the machine above using Machi's flow chart generation utility. See below for details on how to generate charts for your own machines.
 
 ### Executing
 
@@ -273,22 +268,15 @@ const execute = makeMachine<Context, AdditionalEntryData>(
       ],
     },
     {
-      fork: "Old enough to drink?",
-      requirements: ["isTooYoung"],
-      states: [
-        {
-          id: "Sorry, you're too young for free beer",
-          isDone: [],
-          screen: TooYoungScreen,
-        },
-      ],
+      id: "Sorry, you're too young for free beer",
+      isDone: [],
+      screen: TooYoungScreen,
     },
   ],
   {
     hasProvidedName: (context) => !!context.name,
     hasProvidedAge: (context) => !!context.age,
     isOfLegalDrinkingAge: (context) => context.age >= 18,
-    isTooYoung: (context) => context.age < 18,
   }
 ));
 ```

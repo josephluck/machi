@@ -17,7 +17,8 @@
     "test:types": "tsc --noEmit",
     "build": "rm -rf ./lib && mkdir lib && tsc",
     "watch": "tsc --project tsconfig-react-app.json --watch",
-    "deploy": "npm run build && npm publish"
+    "deploy": "npm run build && npm publish",
+    "generate-readme-charts": "ts-node ./src/graph/generate-chart.ts --states ./screenshots/states.ts --output ./screenshots/simple-machine.png"
   },
   "dependencies": {
     "execa": "^4.1.0",

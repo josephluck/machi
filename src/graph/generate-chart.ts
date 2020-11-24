@@ -58,7 +58,7 @@ const readStatesFromFile = (): State<any, any, {}>[] => {
   if (!file) {
     throw new Error(`${baseErrMessage} - not found`);
   }
-  if (!file.default || !file.states) {
+  if (!file.default && !file.states) {
     throw new Error(
       `${baseErrMessage} - no "states" or "default" export found`
     );
