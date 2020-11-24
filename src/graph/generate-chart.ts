@@ -47,9 +47,23 @@ const options = yargs(process.argv.slice(2)).options({
     default: "light" as Theme,
     description: "The theme of the generated chart",
   },
+  height: {
+    alias: "H",
+    type: "number",
+    description:
+      "The height of the generated chart. Tweak this value if your generated chart is too small. Note only applies for PNG and PDF types.",
+    default: 600,
+  },
+  width: {
+    alias: "w",
+    type: "number",
+    default: 800,
+    description:
+      "The width of the generated chart. Tweak this value if your generated chart is too small. Note only applies for PNG and PDF types.",
+  },
   nodeModulesPath: {
     type: "string",
-    default: "../../node_modules",
+    default: path.join(__dirname, "../../node_modules"),
     description:
       "Optional path to node_modules (where you may have installed @mermaid-js/mermaid-cli). The default should work, but you may pass a specific path to your node_modules if you run in to difficulty with the default in yarn / lerna mono-repositories.",
   },
@@ -86,6 +100,8 @@ const writeMermaidSvg = async (tempFilePath: string) => {
   const mermaidArgs = [
     ["-i", tempFilePath],
     ["-o", outputPath],
+    ["-w", options.width.toString()],
+    ["-H", options.height.toString()],
     [
       "-b",
       options.theme === "dark" ? darkTheme.background : lightTheme.background,
@@ -93,11 +109,7 @@ const writeMermaidSvg = async (tempFilePath: string) => {
   ];
 
   const localMmdc = async () => {
-    const mermaidExecutable = path.join(
-      __dirname,
-      options.nodeModulesPath,
-      ".bin/mmdc"
-    );
+    const mermaidExecutable = path.join(options.nodeModulesPath, ".bin/mmdc");
     await execa(mermaidExecutable, flatten(mermaidArgs));
     return outputPath;
   };
