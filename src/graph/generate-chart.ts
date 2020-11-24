@@ -22,23 +22,27 @@ const supportedExtensions = ["pdf", "svg", "png"];
 const options = yargs(process.argv.slice(2)).options({
   states: {
     type: "string",
+    alias: "s",
     demandOption: true,
     description:
       'Path to the file containing your states export. Note that this file MUST export your states array as the default export, or as a named export under the "states" export. The path is relative to the working directory this script is run from.',
   },
   output: {
     type: "string",
+    alias: "o",
     demandOption: true,
     description: `Path to the output file the generated chart will be saved to including the extension. ${supportedExtensions.join(
       ", "
     )} extensions are supported. The path is relative to the working directory this script is run from.`,
   },
   direction: {
+    alias: "d",
     choices: directionChoice,
     default: "vertical" as Direction,
     description: "The direction of the generated chart",
   },
   theme: {
+    alias: "t",
     choices: themeChoice,
     default: "light" as Theme,
     description: "The theme of the generated chart",
