@@ -34,6 +34,52 @@ describe("state machine", () => {
     expect(extractEntries(result!.history).map(toName)).toEqual([]);
   });
 
+  it("supports inline condition predicates", () => {
+    const execute = makeMachine<{ done: boolean }, {}>(
+      [
+        {
+          id: "1",
+          isDone: ["yes", (context) => context.done],
+        },
+      ],
+      basicConditions
+    );
+
+    const result = execute({ done: false });
+
+    expect(result!.entry.id).toEqual("1");
+    expect(extractEntries(result!.history).map(toName)).toEqual([]);
+
+    expect(execute({ done: true })!.entry).toBeNull();
+  });
+
+  it("supports inline condition predicates in forks", () => {
+    const execute = makeMachine<{ done: boolean }, {}>(
+      [
+        {
+          id: "1",
+          isDone: ["yes"],
+        },
+        {
+          fork: "2",
+          requirements: ["yes", (context) => context.done],
+          states: [
+            {
+              id: "3",
+              isDone: [],
+            },
+          ],
+        },
+      ],
+      basicConditions
+    );
+
+    const result = execute({ done: true });
+
+    expect(result!.entry.id).toEqual("3");
+    expect(extractEntries(result!.history).map(toName)).toEqual(["1", "2"]);
+  });
+
   it("builds up history from a simple machine", () => {
     const execute = makeMachine<void, {}>(
       [

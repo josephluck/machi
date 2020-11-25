@@ -1,4 +1,4 @@
-import { State, isFork, isEntry, Fork } from "../machine";
+import { State, isFork, isEntry, Fork, isConditionKey } from "../machine";
 
 export enum REASONS {
   ENTRY_DONE = "ENTRY_DONE",
@@ -38,7 +38,7 @@ export const linksToMermaid = (result: Link[]) =>
           ? "false"
           : "unknown";
       const arrow = link.reason === REASONS.FORK_SKIPPED ? "-.->" : "-->";
-      const reqs = `|${link.from.requirements.join(
+      const reqs = `|${condNames(link.from.requirements).join(
         " and "
       )} ${isAre} ${truthy}|`;
 
@@ -58,12 +58,16 @@ export const linksToMermaid = (result: Link[]) =>
       const toId = makeId(link.to);
       const isAre = link.from.isDone.length > 1 ? "are" : "is";
       if (isEntry(link.to)) {
-        const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
+        const reqs = `|${condNames(link.from.isDone).join(
+          " and "
+        )} ${isAre} true|`;
         const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}[${link.to.id}]`;
         return [...prev, line];
       }
       if (isFork(link.to)) {
-        const reqs = `|${link.from.isDone.join(" and ")} ${isAre} true|`;
+        const reqs = `|${condNames(link.from.isDone).join(
+          " and "
+        )} ${isAre} true|`;
         const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}{${
           link.to!.fork
         }}`;
@@ -72,6 +76,11 @@ export const linksToMermaid = (result: Link[]) =>
       return prev;
     }
   }, []);
+
+export const condNames = (conditions: (string | ((ctx: any) => boolean))[]) =>
+  conditions.map((cond) =>
+    isConditionKey(cond) ? cond : cond.name || "anonymousFunction"
+  );
 
 export const makeId = (state: State<any, any, any> | undefined) =>
   !state ? "undefined" : isFork(state) ? toId(state.fork) : toId(state.id);
@@ -138,10 +147,15 @@ export const areStatesIdentical = (
     return false;
   }
   if (isFork(stateA) && isFork(stateB)) {
-    return stateA.requirements.join("") === stateB.requirements.join("");
+    return (
+      condNames(stateA.requirements).join("") ===
+      condNames(stateB.requirements).join("")
+    );
   }
   if (isEntry(stateA) && isEntry(stateB)) {
-    return stateA.isDone.join("") === stateB.isDone.join("");
+    return (
+      condNames(stateA.isDone).join("") === condNames(stateB.isDone).join("")
+    );
   }
   return false;
 };

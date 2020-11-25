@@ -132,30 +132,38 @@ const execute = makeMachine<Context>(
     hasProvidedAge: (context) => !!context.age,
     isOfLegalDrinkingAge: (context) => context.age >= 18,
   }
-));
+);
 
-console.log(execute({
-  name: undefined,
-  age: undefined,
-}));
+console.log(
+  execute({
+    name: undefined,
+    age: undefined,
+  })
+);
 // --> { entry: { id: "What's your name", ... }, history: [ ... ] }
 
-console.log(execute({
-  name: "Joseph Luck",
-  age: undefined,
-}));
+console.log(
+  execute({
+    name: "Joseph Luck",
+    age: undefined,
+  })
+);
 // --> { entry: { id: "What's your age", ... }, history: [ ... ] }
 
-console.log(execute({
-  name: "Joseph Luck",
-  age: 14,
-}));
+console.log(
+  execute({
+    name: "Joseph Luck",
+    age: 14,
+  })
+);
 // --> { entry: { id: "Sorry, you're too young for free beer", ... }, history: [ ... ] }
 
-console.log(execute({
-  name: "Joseph Luck",
-  age: 36,
-}));
+console.log(
+  execute({
+    name: "Joseph Luck",
+    age: 36,
+  })
+);
 // --> { entry: { id: "Great, you can have free beer!", ... }, history: [ ... ] }
 ```
 
@@ -230,6 +238,35 @@ You'll notice that the history includes all satisfied Entries and Forks regardle
 
 The second argument to Machi is an object of condition functions that are referred to by Entries and Forks using keys (these are type safe if you're using TypeScript!). Condition functions are predicates that are provided the current data context (passed in during execution) and are expected to return a boolean.
 
+Machi also supports in-line condition predicates which can be useful for conditions that are not shared between states:
+
+```typescript
+type Context = {
+  name: string | undefined;
+  age: number | undefined;
+};
+
+const execute = makeMachine<Context>(
+  [
+    {
+      id: "What's your name",
+      isDone: ["hasProvidedName"], // This is run when execute is called, and cached if this condition is encountered later in execution
+    },
+    {
+      id: "And your age?",
+      isDone: [(context) => !!context.age], // This is called when the machine evaluates this state
+    },
+  ],
+  {
+    hasProvidedName: (context) => !!context.name,
+  }
+);
+```
+
+It's recommended to use condition objects referred to by key, as Machi will evaluate these once at the start of execution and caches them during recursive evaluation.
+
+In addition, during chart generation (see below) conditions referred to by key will guarantee useful condition name labels are shown against state connections (however if you use a named inline function, you'll still get a useful label. If you use an anonymous function, it'll display anonymous).
+
 ### Extra Entry data
 
 By default Entries are expected to provide a `id` and a list of `isDone` conditions, however to provide extra utility Entries can specify arbitrary additional data. For example:
@@ -278,7 +315,7 @@ const execute = makeMachine<Context, AdditionalEntryData>(
     hasProvidedAge: (context) => !!context.age,
     isOfLegalDrinkingAge: (context) => context.age >= 18,
   }
-));
+);
 ```
 
 If you're using TypeScript, you can provide type safety to your entries additional properties by populating the second generic of `makeMachine`.
@@ -294,7 +331,12 @@ The tool expects you to provide a JavaScript file (when using node) or a TypeScr
 const states = [
   {
     id: "What's your name",
-    isDone: ["hasProvidedName"],
+    isDone: [
+      "hasProvidedName",
+      function anotherNamedCondition() {
+        return true;
+      },
+    ],
     screen: NameScreen,
   },
   {

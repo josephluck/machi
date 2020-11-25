@@ -1,3 +1,5 @@
+type Predicate<Context> = (context: Context) => boolean;
+
 /**
  * An entry within the flow. An entry represents a single (potentially) terminal
  * node within the flow
@@ -12,14 +14,14 @@ export type Entry<
        * Must be unique within the context of a machine
        */
       id: string;
-      isDone: (keyof Conditions)[];
+      isDone: (keyof Conditions | Predicate<Context>)[]; // TODO: support both array and single condition
     }
   : AdditionalEntryData & {
       /**
        * Must be unique within the context of a machine
        */
       id: string;
-      isDone: (keyof Conditions)[];
+      isDone: (keyof Conditions | Predicate<Context>)[]; // TODO: support both array and single condition
     };
 
 /**
@@ -37,7 +39,7 @@ export type Fork<
    * generation.
    */
   chartGroup?: string;
-  requirements: (keyof Conditions)[];
+  requirements: (keyof Conditions | Predicate<Context>)[]; // TODO: support both array and single condition
   states: State<Context, Conditions, AdditionalEntryData>[];
 };
 
@@ -107,13 +109,13 @@ export const makeMachine = <
     currentEntryName: string | undefined,
     _states: State<Context, Conditions, AdditionalEntryData>[] = [],
     history: State<Context, Conditions, AdditionalEntryData>[] = [],
-    evaluatedConditions = evaluateConditions(context),
+    evaluatedConditions = evaluateConditions(context), // TODO: lazily evaluate conditions when they are encountered for perf, rather than all up front.
     entryInHistory:
       | Entry<Context, Conditions, AdditionalEntryData>
       | undefined = undefined
   ): InternalExecuteResult | undefined => {
     const result = _states.reduce((entryFoundInCurrentLevel, state) => {
-      if (isForkEntered(state, evaluatedConditions)) {
+      if (isForkEntered(state, context, evaluatedConditions)) {
         history.push(state);
         return process(
           context,
@@ -154,11 +156,11 @@ export const makeMachine = <
         return entryFoundInCurrentLevel;
       }
 
-      if (isEntryDone(state, evaluatedConditions)) {
+      if (isEntryDone(state, context, evaluatedConditions)) {
         history.push(state);
       }
 
-      if (isEntryNext(state, evaluatedConditions)) {
+      if (isEntryNext(state, context, evaluatedConditions)) {
         return {
           entry: state,
           history,
@@ -264,10 +266,15 @@ export const isForkEntered = <
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>,
+  context: Context,
   evaluatedConditions: Record<keyof Conditions, boolean>
 ): state is Fork<Context, Conditions, AdditionalEntryData> =>
   isFork<Context, Conditions, AdditionalEntryData>(state) &&
-  state.requirements.every((id) => evaluatedConditions[id]);
+  state.requirements.every((cond) =>
+    isConditionKey<Conditions, Context>(cond)
+      ? evaluatedConditions[cond]
+      : cond(context)
+  );
 
 /**
  * Returns a boolean representing whether the provided state is an entry state
@@ -279,10 +286,15 @@ export const isEntryDone = <
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>,
+  context: Context,
   evaluatedConditions: Record<keyof Conditions, boolean>
 ): state is Entry<Context, Conditions, AdditionalEntryData> =>
   isEntry<Context, Conditions, AdditionalEntryData>(state) &&
-  state.isDone.every((key) => evaluatedConditions[key]);
+  state.isDone.every((cond) =>
+    isConditionKey<Conditions, Context>(cond)
+      ? evaluatedConditions[cond]
+      : cond(context)
+  );
 
 /**
  * Returns a boolean representing whether the provided state is an entry state
@@ -295,7 +307,14 @@ export const isEntryNext = <
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>,
+  context: Context,
   evaluatedConditions: Record<keyof Conditions, boolean>
 ): state is Entry<Context, Conditions, AdditionalEntryData> =>
   isEntry<Context, Conditions, AdditionalEntryData>(state) &&
-  state.isDone.some((key) => !evaluatedConditions[key]);
+  state.isDone.some((cond) =>
+    isConditionKey(cond) ? !evaluatedConditions[cond] : !cond(context)
+  );
+
+export const isConditionKey = <Conditions, Context>(
+  key: keyof Conditions | Predicate<Context>
+): key is keyof Conditions => typeof key === "string";
