@@ -79,7 +79,7 @@ export const linksToMermaid = (result: Link[]) =>
 
 export const condNames = (conditions: (string | ((ctx: any) => boolean))[]) =>
   conditions.map((cond) =>
-    isConditionKey(cond) ? cond : cond.name || "anonymousFunction"
+    isConditionKey(cond) ? cond : cond.name || "unknown"
   );
 
 export const makeId = (state: State<any, any, any> | undefined) =>

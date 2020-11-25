@@ -265,7 +265,7 @@ const execute = makeMachine<Context>(
 
 It's recommended to use condition objects referred to by key, as Machi will evaluate these once at the start of execution and caches them during recursive evaluation.
 
-In addition, during chart generation (see below) conditions referred to by key will guarantee useful condition name labels are shown against state connections (however if you use a named inline function, you'll still get a useful label. If you use an anonymous function, it'll display anonymous).
+In addition, during chart generation (see below) conditions referred to by key will guarantee useful condition name labels are shown against state connections (however if you use a named inline function, you'll still get a useful label. If you use an anonymous function, it'll display "unknown").
 
 ### Extra Entry data
 
