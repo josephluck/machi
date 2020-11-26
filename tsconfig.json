@@ -8,7 +8,6 @@
     "allowSyntheticDefaultImports": true,
     "preserveConstEnums": true,
     "declaration": true,
-    "outDir": "lib",
     "sourceMap": false,
     "lib": ["es6", "es7", "dom"],
     "removeComments": false,

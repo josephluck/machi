@@ -1,8 +1,8 @@
 {
   "name": "@josephluck/machi",
-  "version": "1.1.9",
+  "version": "0.0.1",
   "description": "Data driven state machines.",
-  "main": "./lib/index.js",
+  "main": "./lib/machine.js",
   "files": [
     "src/",
     "lib/"
@@ -16,7 +16,7 @@
     "test": "jest",
     "test:types": "tsc --noEmit",
     "build": "rm -rf ./lib && mkdir lib && tsc",
-    "deploy": "npm run build && npm publish",
+    "deploy": "npm run build && npm publish --access public",
     "generate-readme-charts": "ts-node ./src/graph/generate-chart.ts -s ./screenshots/states.ts -o ./screenshots/simple-machine.png"
   },
   "dependencies": {
