@@ -1,38 +1,11 @@
 {
-  "name": "@josephluck/machi",
-  "version": "1.1.9",
-  "description": "Data driven state machines.",
-  "main": "./lib/index.js",
-  "files": [
-    "src/",
-    "lib/"
+  "name": "machi",
+  "private": "true",
+  "workspaces": [
+    "machi",
+    "examples/*"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/josephluck/machi"
-  },
-  "types": "./lib/index.d.ts",
-  "scripts": {
-    "test": "jest",
-    "test:types": "tsc --noEmit",
-    "build": "rm -rf ./lib && mkdir lib && tsc",
-    "watch": "tsc --project tsconfig-react-app.json --watch",
-    "deploy": "npm run build && npm publish",
-    "generate-readme-charts": "ts-node ./src/graph/generate-chart.ts -s ./screenshots/states.ts -o ./screenshots/simple-machine.png"
-  },
-  "dependencies": {
-    "execa": "^4.1.0",
-    "ora": "^5.1.0",
-    "yargs": "^16.1.1"
-  },
-  "peerDependencies": {
-    "@mermaid-js/mermaid-cli": "^8.8.2-beta.8"
-  },
-  "devDependencies": {
-    "@types/jest": "^24.0.0",
-    "@types/node": "^12.0.0",
-    "jest": "^26.5.3",
-    "ts-jest": "^26.4.1",
-    "typescript": "~3.7.2"
-  }
+  "dependencies": {},
+  "peerDependencies": {},
+  "devDependencies": {}
 }

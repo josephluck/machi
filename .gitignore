@@ -6,7 +6,7 @@ coverage.json
 .DS_Store
 *.swp
 lib/
-examples/react/src/lib
 graph.svg
 graph.pdf
 graph.png
+secret-states
