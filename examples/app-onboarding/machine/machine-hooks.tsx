@@ -1,13 +1,14 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   makeMachine,
   State,
   Condition,
   isEntry,
 } from "@josephluck/machi/src/machine";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import { getCurrentRoute, navigate, reset } from "../navigation";
+import { useMachine } from "./machine";
 
 export const makeMachineHooks = <
   Context extends any = void,
@@ -26,8 +27,6 @@ export const makeMachineHooks = <
   initialContext: Context;
 }) => {
   const useMakeMachine = () => {
-    const { navigate } = useNavigation();
-    const { name: currentRouteName, ...route } = useRoute();
     const [context, _setContext] = useState<Context>(initialContext);
     const getNextState = makeMachine<Context, AdditionalEntryData, Conditions>(
       states,
@@ -46,27 +45,38 @@ export const makeMachineHooks = <
       }
     };
 
+    const clearContext = async () => {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+      _setContext(initialContext);
+    };
+
     const execute = useCallback(
       async (ctx: Context, shouldNavigate = true) => {
+        console.log("---------------------------");
         await setContext(ctx);
-        const result = getNextState(ctx, currentRouteName);
+        const currentRouteName = getCurrentRoute();
+        console.log("got route name", currentRouteName?.name);
+        const result = getNextState(ctx, currentRouteName?.name);
+        console.log("next result", { result, ctx });
         if (!result) {
           console.warn("Next state in machine not found - reached the end.");
         } else if (shouldNavigate) {
+          console.log("navigating to", result.entry.id);
           navigate(result.entry.id);
         }
         return result;
       },
-      [context, currentRouteName, navigate, getNextState, route]
+      [context, navigate, getNextState]
     );
 
-    return { context, setContext, execute, getNextState };
+    return { context, setContext, clearContext, execute, getNextState };
   };
 
   const MachineContext = React.createContext<ReturnType<typeof useMakeMachine>>(
     {
       context: initialContext,
       setContext: async () => void null,
+      clearContext: async () => undefined,
       execute: async () => undefined,
       getNextState: () => void null,
     }
@@ -82,7 +92,6 @@ export const makeMachineHooks = <
 
   const useInitialiseMachine = () => {
     const { getNextState, setContext } = useMachine();
-    const { reset } = useNavigation();
 
     useEffect(() => {
       const doEffect = async () => {
@@ -131,6 +140,7 @@ export const makeMachineHooks = <
  */
 export const useOnboardingStorage = () => {
   const [state, setState] = useState<any>();
+  const { clearContext } = useMachine();
 
   useEffect(() => {
     const interval = setInterval(
@@ -144,10 +154,8 @@ export const useOnboardingStorage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const clear = () => setState(undefined);
-
   return {
-    clear,
+    clearContext,
     state,
   };
 };

@@ -1,7 +1,14 @@
-import { Text } from "react-native";
+import React from "react";
+import { Button, Text, View } from "react-native";
+
 import { useOnboardingStorage } from "../machine/machine-hooks";
 
 export const DisplayOnboardingStorage = () => {
-  const { state } = useOnboardingStorage();
-  return <Text>{JSON.stringify(state || {})}</Text>;
+  const { state, clearContext } = useOnboardingStorage();
+  return (
+    <View>
+      <Text>{JSON.stringify(state || {})}</Text>
+      <Button title="Clear" onPress={clearContext} />
+    </View>
+  );
 };

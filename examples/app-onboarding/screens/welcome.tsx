@@ -7,13 +7,16 @@ import { DisplayOnboardingStorage } from "../components/onboarding-storage";
 export const id = "welcome";
 
 export const screen = () => {
-  const { execute } = useMachine();
+  const { execute, context } = useMachine();
 
   return (
     <View>
       <Text>Welcome</Text>
       <DisplayOnboardingStorage />
-      <Button title="Start" onPress={() => execute({ hasSeenWelcome: true })} />
+      <Button
+        title="Start"
+        onPress={() => execute({ ...context, hasSeenWelcome: true })}
+      />
     </View>
   );
 };

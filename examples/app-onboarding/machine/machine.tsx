@@ -1,3 +1,5 @@
+import { Condition, State } from "@josephluck/machi/src/machine";
+
 import { makeMachineHooks } from "./machine-hooks";
 
 import * as Welcome from "../screens/welcome";
@@ -12,33 +14,37 @@ type Context = {
 
 type AdditionalEntryData = {};
 
+type Conditions = Record<string, Condition<Context>>;
+
+export const states: State<Context, Conditions, AdditionalEntryData>[] = [
+  {
+    id: Welcome.id,
+    isDone: [
+      function hasSeenWelcome(context) {
+        return context.hasSeenWelcome;
+      },
+    ],
+  },
+  {
+    id: FirstName.id,
+    isDone: [
+      function hasEnteredFirstName(context) {
+        return Boolean(context.firstName);
+      },
+    ],
+  },
+  {
+    id: SecondName.id,
+    isDone: [
+      function hasEnteredSecondName(context) {
+        return Boolean(context.secondName);
+      },
+    ],
+  },
+];
+
 const machineHooks = makeMachineHooks<Context, AdditionalEntryData>({
-  states: [
-    {
-      id: Welcome.id,
-      isDone: [
-        function hasSeenWelcome(context) {
-          return context.hasSeenWelcome;
-        },
-      ],
-    },
-    {
-      id: FirstName.id,
-      isDone: [
-        function hasEnteredFirstName(context) {
-          return Boolean(context.firstName);
-        },
-      ],
-    },
-    {
-      id: SecondName.id,
-      isDone: [
-        function hasEnteredSecondName(context) {
-          return Boolean(context.secondName);
-        },
-      ],
-    },
-  ],
+  states,
   conditions: {},
   initialContext: {
     hasSeenWelcome: false,
