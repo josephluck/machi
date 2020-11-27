@@ -144,46 +144,56 @@ export const makeMachine = <
         );
       }
 
-      if (entryFoundInCurrentLevel) {
-        /**
-         * We're trying to find the next closest entry to the entry id passed
-         * in to execute. This means the entire state tree will be evaluated as
-         * normal, but we'll provide the next closest entry rather than the last
-         * entry in the resultant history.
-         * NB: important to still return the full history as normal. For use
-         * cases such as traversing back and forth through a navigation back
-         * stack.
-         */
+      if (isEntryDone(state, context, evaluatedConditions)) {
+        // TODO: is this the correct check?
+        if (!entryFoundInCurrentLevel) {
+          history.push(state);
+        }
+      }
+
+      if (isEntryNext(state, context, evaluatedConditions)) {
+        if (entryFoundInCurrentLevel) {
+          // NB: stop recursion here, it's already found
+          return entryFoundInCurrentLevel;
+        }
+
         const entriesInHistory = history.filter(isEntry);
         if (currentEntryName && entriesInHistory.length) {
+          /**
+           * We're trying to find the next closest entry to the entry id passed
+           * in to execute. This means the entire state tree will be evaluated as
+           * normal, but we'll provide the next closest entry rather than the last
+           * entry in the resultant history.
+           */
           const currentIndexInHistory = entriesInHistory.findIndex(
             (s) => isEntry(s) && s.id === currentEntryName
           );
           const nextEntryInHistory =
             entriesInHistory[currentIndexInHistory + 1];
 
-          return nextEntryInHistory && isEntry(nextEntryInHistory)
-            ? {
-                ...entryFoundInCurrentLevel,
-                entryInHistory: nextEntryInHistory,
-              }
-            : entryFoundInCurrentLevel;
+          if (nextEntryInHistory && isEntry(nextEntryInHistory)) {
+            return {
+              entry: state,
+              history,
+              entryInHistory: nextEntryInHistory,
+            };
+          }
+          return {
+            entry: state,
+            history,
+            entryInHistory,
+          };
         }
 
-        return entryFoundInCurrentLevel;
-      }
-
-      if (isEntryDone(state, context, evaluatedConditions)) {
-        history.push(state);
-      }
-
-      if (isEntryNext(state, context, evaluatedConditions)) {
+        // NB: this is the first not-done entry
         return {
           entry: state,
           history,
           entryInHistory,
         };
       }
+
+      return entryFoundInCurrentLevel;
     }, undefined as InternalExecuteResult | undefined);
 
     return result;

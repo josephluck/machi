@@ -396,7 +396,7 @@ describe("state machine", () => {
       basicConditions
     );
 
-    const result = execute();
+    let result = execute();
 
     const retainedHistory = ["1", "2", "3"];
     expect(result!.entry.id).toEqual("4");
@@ -404,13 +404,17 @@ describe("state machine", () => {
       retainedHistory
     );
 
-    let next = execute(void null, "2");
-    expect(next!.entry.id).toEqual("3");
-    expect(extractEntries(next!.history).map(toName)).toEqual(retainedHistory);
+    result = execute(void null, "2");
+    expect(result!.entry.id).toEqual("3");
+    expect(extractEntries(result!.history).map(toName)).toEqual(
+      retainedHistory
+    );
 
-    next = execute(void null, "3");
-    expect(next!.entry.id).toEqual("4");
-    expect(extractEntries(next!.history).map(toName)).toEqual(retainedHistory);
+    result = execute(void null, "3");
+    expect(result!.entry.id).toEqual("4");
+    expect(extractEntries(result!.history).map(toName)).toEqual(
+      retainedHistory
+    );
   });
 
   it("doesn't progress through history when current state id is within history, but the context has changed the flow", () => {
@@ -471,6 +475,34 @@ describe("state machine", () => {
     expect(result!.entry.id).toEqual("1");
     expect(result!.entry).toHaveProperty("additional");
     expect(result!.entry.additional).toEqual({ data: "works" });
+  });
+
+  it("replays history when the next entry is the second to last", () => {
+    /**
+     * NB: this is an edge case-specific handling case necessary due to the way
+     * the recursion is set up.
+     */
+    const execute = makeMachine(
+      [
+        {
+          id: "1",
+          isDone: [() => true],
+        },
+        {
+          id: "2",
+          isDone: [() => true],
+        },
+        {
+          id: "3",
+          isDone: [() => false],
+        },
+      ],
+      basicConditions
+    );
+
+    const result = execute(void null, "1");
+
+    expect(result?.entry.id).toEqual("2");
   });
 });
 

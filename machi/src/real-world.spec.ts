@@ -208,7 +208,7 @@ describe("free beer example", () => {
     expect(result!.entry.id).toEqual("Yay! You can have free beer");
   });
 
-  it.skip("progresses through history from start to finish", () => {
+  it("progresses through history from start to finish", () => {
     const ctx = {
       ...initialContext,
       age: 22,
@@ -243,8 +243,7 @@ describe("free beer example", () => {
       address: "31 The Street",
       jobTitle: "Bartender",
     };
-    const initial = execute(ctx);
-    const result = execute({ ...ctx, age: 10 }, initial!.entry.id);
+    const result = execute({ ...ctx, age: 10 }, "How old are you?");
     expect(result!.entry.id).toEqual("Sorry, you're too young for free beer");
     expect(extractEntries(result!.history).map(toName)).toEqual([
       "How old are you?",
