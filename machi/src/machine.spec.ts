@@ -50,7 +50,7 @@ describe("state machine", () => {
     expect(result!.entry.id).toEqual("1");
     expect(extractEntries(result!.history).map(toName)).toEqual([]);
 
-    expect(execute({ done: true })!.entry).toBeNull();
+    expect(execute({ done: true })).toBeUndefined();
   });
 
   it("supports inline condition predicates in forks", () => {
@@ -66,7 +66,7 @@ describe("state machine", () => {
           states: [
             {
               id: "3",
-              isDone: [],
+              isDone: ["no"],
             },
           ],
         },
@@ -77,7 +77,7 @@ describe("state machine", () => {
     const result = execute({ done: true });
 
     expect(result!.entry.id).toEqual("3");
-    expect(extractEntries(result!.history).map(toName)).toEqual(["1", "2"]);
+    expect(result!.history.map(toName)).toEqual(["1", "2"]);
   });
 
   it("builds up history from a simple machine", () => {
@@ -372,7 +372,7 @@ describe("state machine", () => {
     ]);
   });
 
-  it.only("progresses through history consecutively when current state id is within history", () => {
+  it("progresses through history consecutively when current state id is within history", () => {
     const execute = makeMachine(
       [
         {
@@ -404,8 +404,12 @@ describe("state machine", () => {
       retainedHistory
     );
 
-    const next = execute(void null, "2");
+    let next = execute(void null, "2");
     expect(next!.entry.id).toEqual("3");
+    expect(extractEntries(next!.history).map(toName)).toEqual(retainedHistory);
+
+    next = execute(void null, "3");
+    expect(next!.entry.id).toEqual("4");
     expect(extractEntries(next!.history).map(toName)).toEqual(retainedHistory);
   });
 
@@ -419,7 +423,7 @@ describe("state machine", () => {
             { id: "1", isDone: ["yes"] },
             {
               fork: "Maybe",
-              requirements: ["maybe"],
+              requirements: [(shouldEnter) => shouldEnter],
               states: [
                 { id: "2", isDone: ["yes"] },
                 { id: "3", isDone: ["yes"] },
@@ -430,7 +434,7 @@ describe("state machine", () => {
           ],
         },
       ],
-      { ...basicConditions, maybe: (isYes) => isYes }
+      basicConditions
     );
 
     const result = execute(true);
@@ -465,6 +469,7 @@ describe("state machine", () => {
 
     const result = execute();
     expect(result!.entry.id).toEqual("1");
+    expect(result!.entry).toHaveProperty("additional");
     expect(result!.entry.additional).toEqual({ data: "works" });
   });
 });
