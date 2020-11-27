@@ -1,8 +1,8 @@
 import React from "react";
-import { View, Button, Text } from "react-native";
+import { Button } from "react-native";
 
 import { useMachine } from "../machine/machine";
-import { DisplayOnboardingStorage } from "../components/onboarding-storage";
+import { Screen } from "../components/screen";
 
 export const id = "welcome";
 
@@ -10,13 +10,14 @@ export const screen = () => {
   const { execute, context } = useMachine();
 
   return (
-    <View>
-      <Text>Welcome</Text>
-      <DisplayOnboardingStorage />
-      <Button
-        title="Start"
-        onPress={() => execute({ ...context, hasSeenWelcome: true })}
-      />
-    </View>
+    <Screen
+      title="Welcome"
+      buttons={[
+        <Button
+          title="Start"
+          onPress={() => execute({ ...context, hasSeenWelcome: true })}
+        />,
+      ]}
+    />
   );
 };

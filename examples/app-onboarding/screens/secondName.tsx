@@ -1,8 +1,8 @@
 import React from "react";
-import { View, Button, Text } from "react-native";
+import { Button } from "react-native";
 
 import { useMachine } from "../machine/machine";
-import { DisplayOnboardingStorage } from "../components/onboarding-storage";
+import { Screen } from "../components/screen";
 
 export const id = "secondName";
 
@@ -10,13 +10,14 @@ export const screen = () => {
   const { execute, context } = useMachine();
 
   return (
-    <View>
-      <Text>What's your second name?</Text>
-      <DisplayOnboardingStorage />
-      <Button
-        title="Next"
-        onPress={() => execute({ ...context, secondName: "Luck" })}
-      />
-    </View>
+    <Screen
+      title="What's your second name?"
+      buttons={[
+        <Button
+          title="Next"
+          onPress={() => execute({ ...context, secondName: "Luck" })}
+        />,
+      ]}
+    />
   );
 };

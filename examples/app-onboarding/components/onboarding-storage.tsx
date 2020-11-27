@@ -1,14 +1,19 @@
 import React from "react";
-import { Button, Text, View } from "react-native";
+import { StyleProp, Text, TouchableOpacity, ViewStyle } from "react-native";
+import { useMachine } from "../machine/machine";
 
 import { useOnboardingStorage } from "../machine/machine-hooks";
 
-export const DisplayOnboardingStorage = () => {
-  const { state, clearContext } = useOnboardingStorage();
+export const DisplayOnboardingStorage = ({
+  style,
+}: {
+  style?: StyleProp<ViewStyle>;
+}) => {
+  const { context } = useMachine();
+  const { clearContext } = useOnboardingStorage();
   return (
-    <View>
-      <Text>{JSON.stringify(state || {})}</Text>
-      <Button title="Clear" onPress={clearContext} />
-    </View>
+    <TouchableOpacity onLongPress={clearContext} style={style}>
+      <Text>{JSON.stringify(context || {})}</Text>
+    </TouchableOpacity>
   );
 };
