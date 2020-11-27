@@ -80,6 +80,7 @@ export const makeMachineHooks = <
 
   const MachineProvider = ({ children }: { children: React.ReactNode }) => (
     <MachineContext.Provider value={useMakeMachine()}>
+      <MachineInitialiser />
       {children}
     </MachineContext.Provider>
   );
@@ -101,7 +102,7 @@ export const makeMachineHooks = <
             const result = getNextState(persistedContext);
             if (result && result.history && result.history.length) {
               console.log("Initialising with history", result);
-              const routeIds = result.history
+              const routeIds = [...result.history, result.entry]
                 .filter(isEntry)
                 .map((entry) => entry.id);
               reset({
@@ -124,10 +125,14 @@ export const makeMachineHooks = <
     }, []);
   };
 
+  const MachineInitialiser = () => {
+    useInitialiseMachine();
+    return null;
+  };
+
   return {
     MachineProvider,
     useMachine,
-    useInitialiseMachine,
   };
 };
 
