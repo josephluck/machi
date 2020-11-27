@@ -60,6 +60,24 @@ export type State<
  */
 export type Condition<Context> = (context: Context) => boolean;
 
+export type ExecuteResult<
+  Context,
+  Conditions extends Record<string, Condition<Context>>,
+  AdditionalEntryData
+> = {
+  entry: Entry<Context, Conditions, AdditionalEntryData>;
+  history: State<Context, Conditions, AdditionalEntryData>[];
+};
+
+export type ExecuteMachine<
+  Context,
+  Conditions extends Record<string, Condition<Context>>,
+  AdditionalEntryData
+> = (
+  context: Context,
+  currentState?: string
+) => ExecuteResult<Context, Conditions, AdditionalEntryData> | undefined;
+
 /**
  * Creates a state machine.
  * Returns an initial execution state and history based on the given initial
@@ -86,12 +104,11 @@ export const makeMachine = <
 ) => {
   type ConditionsResult = Record<keyof Conditions, boolean>;
 
-  type ExecuteResult = {
-    entry: Entry<Context, Conditions, AdditionalEntryData>;
-    history: State<Context, Conditions, AdditionalEntryData>[];
-  };
-
-  type InternalExecuteResult = ExecuteResult & {
+  type InternalExecuteResult = ExecuteResult<
+    Context,
+    Conditions,
+    AdditionalEntryData
+  > & {
     entryInHistory: Entry<Context, Conditions, AdditionalEntryData> | undefined;
   };
 
@@ -214,7 +231,7 @@ export const makeMachine = <
     _entryInHistory:
       | Entry<Context, Conditions, AdditionalEntryData>
       | undefined = undefined
-  ): ExecuteResult | undefined => {
+  ): ExecuteResult<Context, Conditions, AdditionalEntryData> | undefined => {
     const result = process(
       context,
       currentEntryName,

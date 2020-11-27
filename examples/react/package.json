@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@josephluck/machi": "*",
     "@types/lodash": "^4.14.162",
     "lodash": "^4.17.20",
     "react": "16.14.0",
