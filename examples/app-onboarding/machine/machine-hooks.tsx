@@ -52,16 +52,12 @@ export const makeMachineHooks = <
 
     const execute = useCallback(
       async (ctx: Context, shouldNavigate = true) => {
-        console.log("---------------------------");
         await setContext(ctx);
         const currentRouteName = getCurrentRoute();
-        console.log("got route name", currentRouteName?.name);
         const result = getNextState(ctx, currentRouteName?.name);
-        console.log("next result", { result, ctx });
         if (!result) {
           console.warn("Next state in machine not found - reached the end.");
         } else if (shouldNavigate) {
-          console.log("navigating to", result.entry.id);
           navigate(result.entry.id);
         }
         return result;
