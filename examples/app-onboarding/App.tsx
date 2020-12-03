@@ -6,9 +6,11 @@ import { MachineProvider } from "./machine/machine";
 import { navigationRef } from "./navigation";
 
 // screens
-import * as Welcome from "./screens/welcome";
-import * as FirstName from "./screens/firstName";
-import * as SecondName from "./screens/secondName";
+import * as WelcomeScreen from "./screens/welcome";
+import * as NameScreen from "./screens/name";
+import * as AgeScreen from "./screens/age";
+import * as SuccessScreen from "./screens/success";
+import * as FailureScreen from "./screens/failure";
 
 const Stack = createStackNavigator();
 
@@ -16,9 +18,20 @@ export default () => (
   <MachineProvider>
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator>
-        <Stack.Screen name={Welcome.id} component={Welcome.screen} />
-        <Stack.Screen name={FirstName.id} component={FirstName.screen} />
-        <Stack.Screen name={SecondName.id} component={SecondName.screen} />
+        <Stack.Screen
+          name={WelcomeScreen.id}
+          component={WelcomeScreen.screen}
+        />
+        <Stack.Screen name={NameScreen.id} component={NameScreen.screen} />
+        <Stack.Screen name={AgeScreen.id} component={AgeScreen.screen} />
+        <Stack.Screen
+          name={SuccessScreen.id}
+          component={SuccessScreen.screen}
+        />
+        <Stack.Screen
+          name={FailureScreen.id}
+          component={FailureScreen.screen}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   </MachineProvider>

@@ -9,7 +9,7 @@ export const Screen = ({
 }: {
   children?: React.ReactNode;
   title: string;
-  buttons: React.ReactNode[];
+  buttons?: React.ReactNode[];
 }) => (
   <View style={styles.container}>
     <Text style={[styles.title, styles.content]}>{title}</Text>
