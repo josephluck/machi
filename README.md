@@ -29,18 +29,18 @@ Machi lets you build deterministic state machines driven by data. A Machi machin
 
 ## Why?
 
-Machi is useful to power data-driven flows through a UI where different screens or components are shown depending on information in the machine.
+Machi is useful to power data-driven flows where different states are resolved depending on information in the machine. As an example, a machine can encode a navigation flow through a journey where states can represent screens or components.
 
-For example, your app might have a complex onboarding journey whereby the user enters information through a series of screens, and the screens they see is dependent on the information they provide as they progress through the journey.
+For example, your app might have a complex onboarding journey whereby the user enters information through a series of screens, and the direction through the journey is dependent on the information they provide.
 
-Depending on the complexity of the journey and the different variations in the direction of the journey, it can be very difficult to manage transitions imperatively. Machi lets you manage a flow declaratively with conditions that determine the direction based on data.
+Depending on the complexity of the journey and the different variations in the direction of the journey, it can be very difficult to manage transitions imperatively. Machi lets you manage a flow declaratively with conditions that determine the direction based on data passed in to the machine.
 
 By declaring states this way, it's possible to evaluate all possible paths through the flow depending on the specified conditions for each state as well as being able to _restore_ a flow from the ground-up. This has some great benefits:
 
-- As Machi is _deterministic_, a history of the traversed states is built up when a machine is executed. This means it's possible to persist the data and _restore_ the flow from the ground-up at any time. By consequence, it's trivial to support scenarios such as the user quitting the app before they have finished the flow and being able to carry on from where they left off whilst maintaining the history of which states they have been through already. This is particularly useful when restoring a back stack.
-- If the data passed to the machine is persisted, it's possible to release updates to the machine (say for example, a new app release) with the machine taking care of the correct state to present to the user when they _restore_ the flow.
-- Machi is able to generate a visual representation of a machine as a flow chart. This helps developers, designers and other stakeholders understand the complexity and possible paths through a machine. It also helps visualise _changes_ to the flow as you extend and modify a machine by giving you confidence that you're not accidentally breaking the flow.
-- Similarly, since Machi encodes all possible paths through a machine, it's possible to generate tests from the machine which can provide a belts-and-braces testing strategy when combined with traditional unit, integration and end-to-end tests.
+- A history of the traversed states is built up when a machine is executed. This means it's possible to persist the data and _restore_ the flow from the ground-up at any time. By consequence, it's trivial to support scenarios such as the user quitting the app before they have finished the flow and being able to resume from where they left off whilst maintaining the history of which states they have been through already.
+- If the data passed to the machine is persisted (aka to a database), it's possible to release updates to the machine (say for example, a new app release) with the machine taking care of the correct state to present to the user when they _restore_ the flow.
+- Machi ships with a tool that generates a visual representation of a machine as a flow chart. This helps developers, designers and other stakeholders understand the complexity and possible paths through a machine. It also helps visualise _changes_ to the flow as you extend and modify a machine and gives you confidence that you're not accidentally breaking the flow somewhere.
+- Similarly, since Machi encodes all possible paths through a machine it's possible to generate tests from the machine which can provide a belts-and-braces testing strategy when combined with traditional unit, integration and end-to-end tests.
 
 ## Installation
 
@@ -64,17 +64,17 @@ A machine is a list of states that are comprised of Entries and Forks. It can be
 
 **State**
 
-A State is a a single node in the machine. It's either an Entry or a Fork.
+A State is a single node in the machine. It's either an Entry or a Fork.
 
 **Entry**
 
 An Entry is a state in the machine that the machine can resolve when it's Executed. It has a id and a list of predicate conditions that determine whether the Entry is "done". When the machine is Executed and it encounters an Entry it will evaluate it's conditions and if they are all truthy, the machine will add it to the History and evaluate the next State in the machine.
 
-Aside from an Entries id and done conditions, an Entry can contain any additional data.
+Aside from an Entries id and done conditions, an Entry can contain any additional data and this data will be returned when the machine is executed.
 
 **Fork**
 
-A Fork is a state in the machine that can be used to separate a series of States based on conditions. It has a id, a list of States and a list of predicate conditions that determine whether the Fork's states will be evaluated. When the machine is Executed and it encounters a Fork it will evaluate it's entry conditions and if they are all truthy, the machine will add it to the History and evaluate the Fork's list of States.
+A Fork is a state in the machine that can be used to separate a series of States based on conditions. It has a name (fork), a list of States and a list of predicate conditions that determine whether the Fork's states will be evaluated during execution. When the machine is Executed and it encounters a Fork it will evaluate it's entry conditions and if they are all truthy, the machine will add it to the History and evaluate the Fork's list of States recursively.
 
 **Conditions and Context**
 
@@ -86,11 +86,11 @@ Context is passed to a machine when it is Executed. The Context for the machine 
 
 A machine can be executed to determine the next Entry. If there are no Entries in the machine that are _not_ done, execute will return a null for the next State. Execute will also return the history of done Entries and entered Forks in the order in which they were evaluated.
 
-It is possible to re-evaluate History with new Context by passing Execute the id of the Entry in History. When Executing like this, the machine will return the immediate next Entry from the History providing the passed Entry exists in the new history. See below for a concrete example.
+It is possible to re-evaluate History with new Context by passing Execute the id of the Entry in History. When a machine is executed with an entry id, if the entry id is found in the history of the execution result, the entry immediately following the passed entry id will be returned, rather than the last entry in the execute result. See below for a concrete example.
 
 ## Usage
 
-When a Machi machine is "executed" (aka provided with data), it will iterate through all of the states and determine the first Entry that is not considered "done".
+When a Machi machine is "executed", it will iterate through all of the states and determine the first Entry that is not considered "done".
 
 Entry states can be declared using Entries and decisions in the direction of the flow can be declared using Forks.
 
@@ -175,11 +175,11 @@ This simple machine results in the following flow:
 
 ### Executing
 
-Once constructed, a Machi machine is one simple function called `execute`. The execute function will is used to traverse the list of states, evaluating each state in order.
+Once constructed, a Machi machine is just one simple function referred to in this documentation as `execute`. The execute function is used to traverse the list of states, evaluating each state in order and recursively.
 
-When a Fork is evaluated, it's `requirements` conditions will be checked, and if they are all truthy, the Fork's `states` will be evaluated recursively.
+When a Fork is evaluated, it's `requirements` conditions will be checked and if they are all truthy, the Fork's `states` will be evaluated recursively.
 
-When an Entry is evaluates, it's `isDone` conditions will be checked, and if any of them return false, the machine will terminate and the Entry will be returned.
+When an Entry is evaluated, it's `isDone` conditions will be checked and if any of them return false, the machine will terminate and the Entry will be returned.
 
 ### History
 
@@ -206,9 +206,9 @@ console.log(
 
 In certain scenarios (for example in a navigation flow where the user can navigate backwards through previous states), it's useful to find the next Entry in the history rather than the final Entry.
 
-Take the machine above for example, imagine that the user has filled out all of the information and has reached the end of the machine. Now, the user has navigated back to the first screen and has updated their name. Now they expect to be taken to the age screen again, essentially travelling forwards through the screens they just went back through in the same order.
+Take the machine above for example, imagine that the user has filled out all of the information and has reached the end of the machine. Now, the user has navigated back to the first screen and has updated their name. They expect to be taken to the age screen again (essentially travelling forwards through the screens they just went back through in the same order).
 
-Of course, if the user updates information that changes the direction through the states (aka different forks) then the result will not follow the previous history. Here's an example:
+However, if the user updates information that changes the direction through the states then the result will not follow the previous history. Here's an example:
 
 ```typescript
 console.log(
@@ -238,7 +238,7 @@ You'll notice that the history includes all satisfied Entries and Forks regardle
 
 The second argument to Machi is an object of condition functions that are referred to by Entries and Forks using keys (these are type safe if you're using TypeScript!). Condition functions are predicates that are provided the current data context (passed in during execution) and are expected to return a boolean.
 
-Machi also supports in-line condition predicates which can be useful for conditions that are not shared between states:
+Machi also supports in-line condition predicates against entries and forks which can be useful for conditions that are not shared between states:
 
 ```typescript
 type Context = {
@@ -263,9 +263,7 @@ const execute = makeMachine<Context>(
 );
 ```
 
-It's recommended to use condition objects referred to by key, as Machi will evaluate these once at the start of execution and caches them during recursive evaluation.
-
-In addition, during chart generation (see below) conditions referred to by key will guarantee useful condition name labels are shown against state connections (however if you use a named inline function, you'll still get a useful label. If you use an anonymous function, it'll display "unknown").
+It's recommended to use condition objects referred to by key, as Machi will evaluate these once at the start of execution and caches them during recursive evaluation, which is better for performance. In addition, during chart generation (see below), conditions referred to by key will provide useful labels shown against state connections (if you use a named inline function, you'll also get a useful label - if you use an anonymous function, it'll display "unknown").
 
 ### Extra Entry data
 
