@@ -58,12 +58,12 @@ npm i @josephluck/machi --save
 
 When a Machi machine is "executed", it will iterate through all of the states and determine the first Entry that is not considered "done".
 
-### Example applications:
+Entry states can be declared using Entries and decisions in the direction of the flow can be declared using Forks.
+
+### Example projects:
 
 - [React Native app onboarding flow](./examples/app-onboarding)
 - More to come 😊
-
-Entry states can be declared using Entries and decisions in the direction of the flow can be declared using Forks.
 
 ### Simple example:
 
