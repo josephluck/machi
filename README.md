@@ -54,47 +54,18 @@ Or...
 npm i @josephluck/machi --save
 ```
 
-## Concepts
-
-Machi has the following core concepts:
-
-**Machine**
-
-A machine is a list of states that are comprised of Entries and Forks. It can be Executed with Context to determine the next Entry.
-
-**State**
-
-A State is a single node in the machine. It's either an Entry or a Fork.
-
-**Entry**
-
-An Entry is a state in the machine that the machine can resolve when it's Executed. It has a id and a list of predicate conditions that determine whether the Entry is "done". When the machine is Executed and it encounters an Entry it will evaluate it's conditions and if they are all truthy, the machine will add it to the History and evaluate the next State in the machine.
-
-Aside from an Entries id and done conditions, an Entry can contain any additional data and this data will be returned when the machine is executed.
-
-**Fork**
-
-A Fork is a state in the machine that can be used to separate a series of States based on conditions. It has a name (fork), a list of States and a list of predicate conditions that determine whether the Fork's states will be evaluated during execution. When the machine is Executed and it encounters a Fork it will evaluate it's entry conditions and if they are all truthy, the machine will add it to the History and evaluate the Fork's list of States recursively.
-
-**Conditions and Context**
-
-A condition is a predicate function that can be used as an Entries "done" requirements or Fork's entry requirements.
-
-Context is passed to a machine when it is Executed. The Context for the machine can be any data type (string, boolean, object, number etc) and will be passed to Condition predicate functions when the machine is Executed. It's important that Condition functions _do not modify the Context in any way_ (this keeps the machine deterministic during execution).
-
-**Execute and History**
-
-A machine can be executed to determine the next Entry. If there are no Entries in the machine that are _not_ done, execute will return a null for the next State. Execute will also return the history of done Entries and entered Forks in the order in which they were evaluated.
-
-It is possible to re-evaluate History with new Context by passing Execute the id of the Entry in History. When a machine is executed with an entry id, if the entry id is found in the history of the execution result, the entry immediately following the passed entry id will be returned, rather than the last entry in the execute result. See below for a concrete example.
-
 ## Usage
 
 When a Machi machine is "executed", it will iterate through all of the states and determine the first Entry that is not considered "done".
 
+### Example applications:
+
+- [React Native app onboarding flow](./examples/app-onboarding)
+- More to come 😊
+
 Entry states can be declared using Entries and decisions in the direction of the flow can be declared using Forks.
 
-### Example:
+### Simple example:
 
 ```typescript
 type Context = {
@@ -172,6 +143,40 @@ This simple machine results in the following flow:
 ![simple flow](https://github.com/josephluck/machi/blob/master/screenshots/simple-machine.png?raw=true)
 
 > Note that this graphic was created from the machine above using Machi's flow chart generation utility. See below for details on how to generate charts for your own machines.
+
+## Concepts
+
+Machi has the following core concepts:
+
+**Machine**
+
+A machine is a list of states that are comprised of Entries and Forks. It can be Executed with Context to determine the next Entry.
+
+**State**
+
+A State is a single node in the machine. It's either an Entry or a Fork.
+
+**Entry**
+
+An Entry is a state in the machine that the machine can resolve when it's Executed. It has a id and a list of predicate conditions that determine whether the Entry is "done". When the machine is Executed and it encounters an Entry it will evaluate it's conditions and if they are all truthy, the machine will add it to the History and evaluate the next State in the machine.
+
+Aside from an Entries id and done conditions, an Entry can contain any additional data and this data will be returned when the machine is executed.
+
+**Fork**
+
+A Fork is a state in the machine that can be used to separate a series of States based on conditions. It has a name (fork), a list of States and a list of predicate conditions that determine whether the Fork's states will be evaluated during execution. When the machine is Executed and it encounters a Fork it will evaluate it's entry conditions and if they are all truthy, the machine will add it to the History and evaluate the Fork's list of States recursively.
+
+**Conditions and Context**
+
+A condition is a predicate function that can be used as an Entries "done" requirements or Fork's entry requirements.
+
+Context is passed to a machine when it is Executed. The Context for the machine can be any data type (string, boolean, object, number etc) and will be passed to Condition predicate functions when the machine is Executed. It's important that Condition functions _do not modify the Context in any way_ (this keeps the machine deterministic during execution).
+
+**Execute and History**
+
+A machine can be executed to determine the next Entry. If there are no Entries in the machine that are _not_ done, execute will return a null for the next State. Execute will also return the history of done Entries and entered Forks in the order in which they were evaluated.
+
+It is possible to re-evaluate History with new Context by passing Execute the id of the Entry in History. When a machine is executed with an entry id, if the entry id is found in the history of the execution result, the entry immediately following the passed entry id will be returned, rather than the last entry in the execute result. See below for a concrete example.
 
 ### Executing
 
