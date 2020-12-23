@@ -1,9 +1,144 @@
 import { makeMachine, Entry, isEntry, State } from "./machine";
 
+describe("auth flow", () => {
+  type Context = {
+    authenticationFlow: "splash" | "signUp" | "signIn";
+    authType: "phone" | "email";
+    phoneNumber?: string;
+    emailAddress?: string;
+    verificationId?: string;
+    verificationCode?: string;
+    password?: string;
+    name?: string;
+  };
+  const execute = makeMachine<Context, {}>(
+    [
+      {
+        id: "splashRoute",
+        isDone: [(context) => context.authenticationFlow !== "splash"],
+      },
+      {
+        fork: "Phone auth",
+        requirements: [(context) => context.authType === "phone"],
+        states: [
+          {
+            id: "signUpPhoneRoute",
+            isDone: [
+              (context) => !!context.phoneNumber,
+              (context) => !!context.verificationId,
+            ],
+          },
+          {
+            id: "signUpPhoneVerifyRoute",
+            isDone: [(context) => !!context.verificationCode],
+          },
+        ],
+      },
+      {
+        fork: "Email auth",
+        requirements: [(context) => context.authType === "email"],
+        states: [
+          {
+            id: "signUpEmailRoute",
+            isDone: [(context) => !!context.emailAddress],
+          },
+          {
+            id: "signUpPasswordRoute",
+            isDone: [(context) => !!context.password],
+          },
+        ],
+      },
+      {
+        id: "signUpNameRoute",
+        isDone: [(context) => !!context.name],
+      },
+    ],
+    {}
+  );
+
+  it("initialises to the splash screen", () => {
+    const result = execute({ authenticationFlow: "splash", authType: "phone" });
+    expect(result?.entry.id).toEqual("splashRoute");
+  });
+
+  it("goes to the phone number route", () => {
+    const result = execute({ authenticationFlow: "signUp", authType: "phone" });
+    expect(result?.entry.id).toEqual("signUpPhoneRoute");
+  });
+
+  it("stays on the phone number route until the verification sms has been sent", () => {
+    const result = execute({
+      authenticationFlow: "signUp",
+      authType: "phone",
+      phoneNumber: "+447123456789",
+    });
+    expect(result?.entry.id).toEqual("signUpPhoneRoute");
+  });
+
+  it("goes to the verify route when the verification sms has been sent", () => {
+    const result = execute({
+      authenticationFlow: "signUp",
+      authType: "phone",
+      phoneNumber: "+447123456789",
+      verificationId: "abc123",
+    });
+    expect(result?.entry.id).toEqual("signUpPhoneVerifyRoute");
+  });
+
+  it("allows going to the email route even after the verification sms has been sent", () => {
+    const result = execute({
+      authenticationFlow: "signUp",
+      authType: "email",
+      phoneNumber: "+447123456789",
+      verificationId: "abc123",
+    });
+    expect(result?.entry.id).toEqual("signUpEmailRoute");
+  });
+
+  it("goes to the name route when the phone number has been verified", () => {
+    const result = execute({
+      authenticationFlow: "signUp",
+      authType: "phone",
+      phoneNumber: "+447123456789",
+      verificationId: "abc123",
+      verificationCode: "123456",
+    });
+    expect(result?.entry.id).toEqual("signUpNameRoute");
+  });
+
+  it("goes to the email route when the auth type is email", () => {
+    const result = execute({
+      authenticationFlow: "signUp",
+      authType: "email",
+    });
+    expect(result?.entry.id).toEqual("signUpEmailRoute");
+  });
+
+  it("goes to the password route when the email has been provided", () => {
+    const result = execute({
+      authenticationFlow: "signUp",
+      authType: "email",
+      emailAddress: "foo@bar.com",
+    });
+    expect(result?.entry.id).toEqual("signUpPasswordRoute");
+  });
+
+  it("goes to the name route when the password has been provided", () => {
+    const result = execute({
+      authenticationFlow: "signUp",
+      authType: "email",
+      emailAddress: "foo@bar.com",
+      password: "supersecret",
+    });
+    expect(result?.entry.id).toEqual("signUpNameRoute");
+  });
+});
+
 describe("free beer example", () => {
   type Context = {
     age?: number;
     name?: string;
+    postcode?: string;
     address?: string;
     jobTitle?: string;
     salary?: number;
@@ -23,7 +158,14 @@ describe("free beer example", () => {
         requirements: ["isOfLegalDrinkingAge"],
         states: [
           { id: "What's your name?", isDone: ["hasEnteredName"] },
-          { id: "What's your postcode?", isDone: ["hasEnteredAddress"] },
+          {
+            id: "What's your postcode?",
+            isDone: [
+              function hasEnteredOrBypassedPostcodeLookup(ctx) {
+                return !!ctx.postcode || ctx.bypassPostcodeLookup;
+              },
+            ],
+          },
           {
             fork: "Bypassed postcode lookup",
             requirements: ["hasBypassedPostcodeLookup"],
@@ -61,6 +203,7 @@ describe("free beer example", () => {
       no: () => false,
       hasEnteredAge: (ctx) => !!ctx.age,
       hasEnteredName: (ctx) => !!ctx.name && ctx.name.length > 0,
+      hasEnteredPostcode: (ctx) => !!ctx.postcode,
       hasEnteredAddress: (ctx) => !!ctx.address,
       hasEnteredJobTitle: (ctx) => !!ctx.jobTitle,
       hasEnteredSalary: (ctx) => !!ctx.salary,
@@ -111,6 +254,7 @@ describe("free beer example", () => {
       ...initialContext,
       age: 22,
       name: "Sarah",
+      postcode: "AB3 2CD",
       address: "31 The Street",
     });
     expect(extractEntries(result!.history).map(toName)).toEqual([
@@ -131,7 +275,7 @@ describe("free beer example", () => {
     expect(extractEntries(result!.history).map(toName)).toEqual([
       "How old are you?",
       "What's your name?",
-      // TODO: should postcode be here?
+      "What's your postcode?",
     ]);
     expect(result!.entry.id).toEqual("What's your address?");
   });
@@ -158,6 +302,7 @@ describe("free beer example", () => {
       ...initialContext,
       age: 22,
       name: "Sarah",
+      postcode: "AB1 2CD",
       address: "31 The Street",
       jobTitle: "Waiter",
     });
@@ -175,6 +320,7 @@ describe("free beer example", () => {
       ...initialContext,
       age: 22,
       name: "Sarah",
+      postcode: "AB1 2CD",
       address: "31 The Street",
       jobTitle: "Lawyer",
       salary: 240000,
@@ -194,6 +340,7 @@ describe("free beer example", () => {
       ...initialContext,
       age: 22,
       name: "Sarah",
+      postcode: "AB1 2CD",
       address: "31 The Street",
       jobTitle: "Bartender",
       salary: 20000,
@@ -213,6 +360,7 @@ describe("free beer example", () => {
       ...initialContext,
       age: 22,
       name: "Sarah",
+      postcode: "AB1 2CD",
       address: "31 The Street",
       jobTitle: "Bartender",
       salary: 20000,
@@ -240,6 +388,7 @@ describe("free beer example", () => {
       ...initialContext,
       age: 22,
       name: "Sarah",
+      postcode: "AB1 2CD",
       address: "31 The Street",
       jobTitle: "Bartender",
     };

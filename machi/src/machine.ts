@@ -133,6 +133,9 @@ export const makeMachine = <
   ): InternalExecuteResult | undefined => {
     const result = _states.reduce((entryFoundInCurrentLevel, state) => {
       if (isForkEntered(state, context, evaluatedConditions)) {
+        if (entryFoundInCurrentLevel) {
+          return entryFoundInCurrentLevel;
+        }
         history.push(state);
         return process(
           context,

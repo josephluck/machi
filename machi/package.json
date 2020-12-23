@@ -1,6 +1,6 @@
 {
   "name": "@josephluck/machi",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "Data driven state machines.",
   "main": "./lib/machine.js",
   "files": [
