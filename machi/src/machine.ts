@@ -172,6 +172,7 @@ export const makeMachine = <
             (s) => isEntry(s) && s.id === currentEntryName
           );
           const nextEntryInHistory =
+            currentIndexInHistory > -1 &&
             entriesInHistory[currentIndexInHistory + 1];
 
           if (nextEntryInHistory && isEntry(nextEntryInHistory)) {

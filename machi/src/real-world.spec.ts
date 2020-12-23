@@ -66,6 +66,14 @@ describe("auth flow", () => {
     expect(result?.entry.id).toEqual("signUpPhoneRoute");
   });
 
+  it("goes to phone number route when passing splash as current route", () => {
+    const result = execute(
+      { authenticationFlow: "signUp", authType: "phone" },
+      "splashRoute"
+    );
+    expect(result?.entry.id).toEqual("signUpPhoneRoute");
+  });
+
   it("stays on the phone number route until the verification sms has been sent", () => {
     const result = execute({
       authenticationFlow: "signUp",
@@ -83,6 +91,14 @@ describe("auth flow", () => {
       verificationId: "abc123",
     });
     expect(result?.entry.id).toEqual("signUpPhoneVerifyRoute");
+  });
+
+  it("goes to the email route when passing phone number route as current route", () => {
+    const result = execute(
+      { authenticationFlow: "signUp", authType: "email" },
+      "signUpPhoneRoute"
+    );
+    expect(result?.entry.id).toEqual("signUpEmailRoute");
   });
 
   it("allows going to the email route even after the verification sms has been sent", () => {
