@@ -1,23 +1,22 @@
 #!/usr/bin/env ts-node
 
 import path from "path";
-import fs from "fs";
 import makeSpinner from "ora";
-import execa from "execa";
 import yargs from "yargs/yargs";
 
 import { State } from "../machine";
-import { darkTheme, generateMermaid, lightTheme } from "./generate-state-links";
+import {
+  Direction,
+  generateChart,
+  supportedExtensions,
+  Theme,
+} from "./generate-mermaid-chart";
 
 const spinner = makeSpinner();
 
-type Direction = "vertical" | "horizontal";
 const directionChoice: ReadonlyArray<Direction> = ["vertical", "horizontal"];
 
-type Theme = "dark" | "light";
 const themeChoice: ReadonlyArray<Theme> = ["dark", "light"];
-
-const supportedExtensions = ["pdf", "svg", "png"];
 
 const options = yargs(process.argv.slice(2)).options({
   states: {
@@ -87,89 +86,15 @@ const readStatesFromFile = (): State<any, any, {}>[] => {
   }
   return states;
 };
-
-const writeTempFile = (contents: string) => {
-  const filePath = path.join(process.cwd(), "mermaid-temp.mmd");
-  fs.writeFileSync(filePath, contents, "utf8");
-  return filePath;
-};
-
-const writeMermaidSvg = async (tempFilePath: string) => {
-  const outputPath = path.join(process.cwd(), options.output);
-
-  const mermaidArgs = [
-    ["-i", tempFilePath],
-    ["-o", outputPath],
-    ["-w", options.width.toString()],
-    ["-H", options.height.toString()],
-    [
-      "-b",
-      options.theme === "dark" ? darkTheme.background : lightTheme.background,
-    ],
-  ];
-
-  const localMmdc = async () => {
-    const mermaidExecutable = path.join(options.nodeModulesPath, ".bin/mmdc");
-    await execa(mermaidExecutable, flatten(mermaidArgs));
-    return outputPath;
-  };
-
-  const npxMmdc = async () => {
-    await execa("npx", [
-      "-p",
-      "@mermaid-js/mermaid-cli",
-      "mmdc",
-      ...flatten(mermaidArgs),
-    ]);
-    return outputPath;
-  };
-
-  try {
-    return await localMmdc();
-  } catch (err) {
-    console.warn(err);
-    spinner.text =
-      'Could not find local mmdc. Falling back to npx. For faster generation, you can install mmdc locally via "npm i @mermaid-js/mermaid-cli --save-dev" or "yarn add @mermaid-js/mermaid-cli --dev"';
-    try {
-      return await npxMmdc();
-    } catch (err) {
-      throw err;
-    }
-  }
-};
-
-const validateOutputExtension = () => {
-  const parts = options.output.split(".");
-  const extension = parts[parts.length - 1];
-
-  if (!supportedExtensions.includes(extension)) {
-    throw new Error(
-      `${extension} output is not currently supported. Chart generation supports ${supportedExtensions.join(
-        ", "
-      )} files.`
-    );
-  }
-};
-
 const run = async () => {
   try {
     spinner.start("Generating chart");
-    validateOutputExtension();
     const states = readStatesFromFile();
-    const mermaid = generateMermaid(states, {
-      theme: options.theme === "dark" ? darkTheme : lightTheme,
-      direction: options.direction,
-    });
-    const tempFilePath = writeTempFile(mermaid);
-    const outputPath = await writeMermaidSvg(tempFilePath);
-    fs.unlinkSync(tempFilePath);
+    const outputPath = await generateChart(options, states);
     spinner.succeed(`Chart generated to ${outputPath}`);
   } catch (err) {
     spinner.fail(err.message);
   }
 };
-
-const flatten = <A>(arr: A[][]): A[] =>
-  arr.reduce((prev, curr) => [...prev, ...curr], [] as A[]);
 
 run();

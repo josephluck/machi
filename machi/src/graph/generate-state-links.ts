@@ -1,4 +1,4 @@
-import { isEntry, isFork, State } from "../machine";
+import { Condition, isEntry, isFork, State } from "../machine";
 import {
   deduplicateLinks,
   Link,
@@ -11,6 +11,7 @@ import {
   getExistingSkippedForkLink,
   sortLinks,
   isGroup,
+  StateLink,
 } from "./utils";
 
 /**
@@ -18,17 +19,23 @@ import {
  * in logical flow order. Takes that result and generates a mermaid-compatible
  * graph from them.
  */
-export const generateStateLinks = (states: State<any, any, {}>[]) => {
-  const result: Link[] = [];
+export const generateStateLinks = <
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+>(
+  states: State<Context, Conditions, AdditionalEntryData>[]
+) => {
+  const result: Link<Context, Conditions, AdditionalEntryData>[] = [];
 
   const run = (
-    _states: State<any, any, {}>[],
+    _states: typeof states,
     /**
      * Keeps track of the parent's next state when a fork is entered, so all of
      * the final entries in the fork (and the nested forks) will successfully
      * link to the next logical state back up the tree.
      */
-    nextStateInParentLevel?: State<any, any, {}>
+    nextStateInParentLevel?: State<Context, Conditions, AdditionalEntryData>
   ) => {
     _states.forEach((state, i) => {
       const nextState = _states.find(
@@ -84,7 +91,8 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
                 !isGroup(link) &&
                 makeId(link.from) === makeId(state) &&
                 makeId(link.to) === makeId(toState) &&
-                link.reason === REASONS.FORK_SKIPPED
+                link.reason === REASONS.FORK_SKIPPED &&
+                isFork(link.from)
               ) {
                 // Make a deep(ish) copy of the state so we don't inadvertently
                 // change the fork's entry links requirements
@@ -97,7 +105,7 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
                 };
               }
             });
-          } else {
+          } else if (toState) {
             result.push({
               type: "link",
               from: state,
@@ -112,7 +120,7 @@ export const generateStateLinks = (states: State<any, any, {}>[]) => {
           result.push({
             type: "link",
             from: state,
-            to: nextState || nextStateInParentLevel,
+            to: (nextState || nextStateInParentLevel)!,
             reason: REASONS.ENTRY_DONE,
           });
         }
@@ -182,9 +190,17 @@ type Options = {
 
 export const generateMermaid = (
   states: State<any, any, {}>[],
+  options: Options = {}
+) =>
+  generateMermaidFromStateLinks(
+    generateStateLinks(states) as StateLink<any, any, any>[],
+    options
+  );
+
+export const generateMermaidFromStateLinks = (
+  links: StateLink<any, any, {}>[],
   { theme = darkTheme, direction = "vertical" }: Options = {}
 ) => {
-  const links = generateStateLinks(states);
   const mermaidLines = linksToMermaid(links);
   const themeLine = `%%{init: ${JSON.stringify({
     theme: "base",
