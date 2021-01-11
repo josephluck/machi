@@ -1,6 +1,7 @@
 import {
   generateChart,
   generateChartFromLinks,
+  generateChartFromPathways,
 } from "./graph/generate-mermaid-chart";
 import { State } from "./machine";
 import { extractFromNamesFromLinks, getPathwaysToState } from "./pathways";
@@ -81,8 +82,8 @@ describe("Possible paths through a machine that uses exclusive forks", () => {
     const result = getPathwaysToState("E6", states);
     expect(result.map(extractFromNamesFromLinks)).toEqual(
       expect.arrayContaining([
-        ["E1", "F1"],
         ["E1", "F1", "E2", "F2", "E3"],
+        ["E1", "F1"],
         ["E1", "F1", "E4", "E5"],
       ])
     );
@@ -95,7 +96,18 @@ describe("Possible paths through a machine that uses exclusive forks", () => {
     );
   });
 
-  it("generates charts for possible pathways", async () => {
+  it("orders possible paths by shortest path first", () => {
+    const result = getPathwaysToState("E6", states);
+    const lengths = result.map((arr) => arr.length);
+    lengths.forEach((length, i) => {
+      const nextLength = lengths[i + 1];
+      if (nextLength) {
+        expect(length).toBeLessThanOrEqual(nextLength);
+      }
+    });
+  });
+
+  it("generates charts for each possible pathway", async () => {
     const result = getPathwaysToState("E6", states);
     await Promise.all(
       result.map((result, i) =>
@@ -108,6 +120,16 @@ describe("Possible paths through a machine that uses exclusive forks", () => {
           result
         )
       )
+    );
+  });
+
+  it("generates a single chart for all possible pathways", async () => {
+    const result = getPathwaysToState("E6", states);
+    await generateChartFromPathways(
+      {
+        output: `../screenshots/tests/pathways-machine-mapped-result-combined.png`,
+      },
+      result
     );
   });
 });

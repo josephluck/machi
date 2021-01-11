@@ -20,14 +20,20 @@ type Group = {
   id: string;
 };
 
+export type StateLinkNode<
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+> = { _machiChartId: string } & State<Context, Conditions, AdditionalEntryData>;
+
 export type StateLink<
   Context,
   Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData
 > = {
   type: "link";
-  from: State<Context, Conditions, AdditionalEntryData>;
-  to: State<Context, Conditions, AdditionalEntryData>;
+  from: StateLinkNode<Context, Conditions, AdditionalEntryData>;
+  to: StateLinkNode<Context, Conditions, AdditionalEntryData>;
   reason: REASONS;
 };
 
@@ -44,14 +50,17 @@ export const linksToMermaid = <
 >(
   result: Link<Context, Conditions, AdditionalEntryData>[]
 ) =>
-  result.reduce((prev: any, link) => {
+  result.reduce<string[]>((prev, link) => {
     if (isGroup(link)) {
-      const line = link.end ? "end" : `subgraph ${toId(link.id)} [${link.id}]`;
+      const line = link.end
+        ? "end"
+        : `subgraph ${stringifyToId(link.id)} [${link.id}]`;
       return [...prev, line];
     }
+
     if (isFork(link.from)) {
-      const fromId = makeId(link.from);
-      const toId = makeId(link.to);
+      const fromId = link.from._machiChartId;
+      const toId = link.to._machiChartId;
       const isAre = link.from.requirements.length > 1 ? "are" : "is";
       const truthy =
         link.reason === REASONS.FORK_ENTERED
@@ -75,28 +84,26 @@ export const linksToMermaid = <
       return prev;
     }
 
-    if (isEntry(link.from)) {
-      const fromId = makeId(link.from);
-      const toId = makeId(link.to);
-      const isAre = link.from.isDone.length > 1 ? "are" : "is";
-      if (isEntry(link.to)) {
-        const reqs = `|${condNames(link.from.isDone as string[]).join(
-          " and "
-        )} ${isAre} true|`;
-        const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}[${link.to.id}]`;
-        return [...prev, line];
-      }
-      if (isFork(link.to)) {
-        const reqs = `|${condNames(link.from.isDone as string[]).join(
-          " and "
-        )} ${isAre} true|`;
-        const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}{${
-          link.to!.fork
-        }}`;
-        return [...prev, line];
-      }
-      return prev;
+    const fromId = link.from._machiChartId;
+    const toId = link.to._machiChartId;
+    const isAre = link.from.isDone.length > 1 ? "are" : "is";
+    if (isEntry(link.to)) {
+      const reqs = `|${condNames(link.from.isDone as string[]).join(
+        " and "
+      )} ${isAre} true|`;
+      const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}[${link.to.id}]`;
+      return [...prev, line];
     }
+    if (isFork(link.to)) {
+      const reqs = `|${condNames(link.from.isDone as string[]).join(
+        " and "
+      )} ${isAre} true|`;
+      const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}{${
+        link.to!.fork
+      }}`;
+      return [...prev, line];
+    }
+    return prev;
   }, []);
 
 export const condNames = (conditions: (string | Predicate<any>)[]) =>
@@ -105,12 +112,16 @@ export const condNames = (conditions: (string | Predicate<any>)[]) =>
   );
 
 export const makeId = (state: State<any, any, any> | undefined) =>
-  !state ? "undefined" : isFork(state) ? toId(state.fork) : toId(state.id);
+  !state
+    ? "undefined"
+    : isFork(state)
+    ? stringifyToId(state.fork)
+    : stringifyToId(state.id);
 
 export const toName = (state: State<any, any, any> | undefined) =>
   !state ? "undefined" : isFork(state) ? state.fork : state.id;
 
-export const toId = (str: string) =>
+export const stringifyToId = (str: string) =>
   str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
 
 /**

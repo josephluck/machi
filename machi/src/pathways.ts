@@ -2,7 +2,7 @@ import { generateStateLinks } from "./graph/generate-state-links";
 import { StateLink } from "./graph/utils";
 import { Condition, isFork, State } from "./machine";
 
-export const getPathwaysToState = <
+const pathways = <
   Context,
   Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData
@@ -20,7 +20,7 @@ export const getPathwaysToState = <
   }
 
   return branches.map((branch) => {
-    const ways = getPathwaysToState(extractFromNameFromLink(branch), states);
+    const ways = pathways(extractFromNameFromLink(branch), states);
 
     if (ways.length) {
       return ways.reduce((acc, way) => [...way, ...acc, branch], []);
@@ -29,6 +29,16 @@ export const getPathwaysToState = <
     return [branch];
   });
 };
+
+export const getPathwaysToState = <
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+>(
+  toName: string,
+  states: State<Context, Conditions, AdditionalEntryData>[]
+): StateLink<Context, Conditions, AdditionalEntryData>[][] =>
+  pathways(toName, states).sort((a, b) => a.length - b.length);
 
 const findLinksToState = <
   Context,

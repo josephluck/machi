@@ -8,6 +8,7 @@ import { State } from "../machine";
 import {
   darkTheme,
   generateMermaid,
+  generateMermaidFromPathways,
   generateMermaidFromStateLinks,
   lightTheme,
 } from "./generate-state-links";
@@ -138,6 +139,23 @@ export const generateChartFromLinks = async (
   try {
     const options = validateOptions(opts);
     const mermaid = generateMermaidFromStateLinks(states, {
+      theme: options.theme === "dark" ? darkTheme : lightTheme,
+      direction: options.direction,
+    });
+    return writeMermaidStringAsOutputFile(options, mermaid);
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+};
+
+export const generateChartFromPathways = async (
+  opts: Partial<Options>,
+  pathways: StateLink<any, any, any>[][]
+) => {
+  try {
+    const options = validateOptions(opts);
+    const mermaid = generateMermaidFromPathways(pathways, {
       theme: options.theme === "dark" ? darkTheme : lightTheme,
       direction: options.direction,
     });

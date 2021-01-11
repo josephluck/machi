@@ -5,13 +5,12 @@ import {
   REASONS,
   linksToMermaid,
   filterInvalidLinks,
-  toName,
   makeId,
-  toId,
   getExistingSkippedForkLink,
   sortLinks,
   isGroup,
   StateLink,
+  StateLinkNode,
 } from "./utils";
 
 /**
@@ -50,8 +49,11 @@ export const generateStateLinks = <
       if (isFork(state)) {
         result.push({
           type: "link",
-          from: state,
-          to: state.states[0],
+          from: { ...state, _machiChartId: generateMachiStateNodeId(state) },
+          to: {
+            ...state.states[0],
+            _machiChartId: generateMachiStateNodeId(state.states[0]),
+          },
           reason: REASONS.FORK_ENTERED,
         });
         if (state.chartGroup) {
@@ -108,8 +110,14 @@ export const generateStateLinks = <
           } else if (toState) {
             result.push({
               type: "link",
-              from: state,
-              to: toState,
+              from: {
+                ...state,
+                _machiChartId: generateMachiStateNodeId(state),
+              },
+              to: {
+                ...toState,
+                _machiChartId: generateMachiStateNodeId(toState),
+              },
               reason: REASONS.FORK_SKIPPED,
             });
           }
@@ -117,10 +125,15 @@ export const generateStateLinks = <
       }
       if (isEntry(state) && state.isDone.length > 0) {
         if (nextState || nextStateInParentLevel) {
+          const s: State<
+            Context,
+            Conditions,
+            AdditionalEntryData
+          > = (nextState || nextStateInParentLevel)!;
           result.push({
             type: "link",
-            from: state,
-            to: (nextState || nextStateInParentLevel)!,
+            from: { ...state, _machiChartId: state.id },
+            to: { ...s, _machiChartId: generateMachiStateNodeId(s) },
             reason: REASONS.ENTRY_DONE,
           });
         }
@@ -133,14 +146,6 @@ export const generateStateLinks = <
   const deduplicatedResult = deduplicateLinks(result);
   const filteredLinks = filterInvalidLinks(states, deduplicatedResult);
   const sortedLinks = sortLinks(filteredLinks);
-
-  // console.log(
-  //   sortedLinks.map((link) => ({
-  //     from: toName(link.from),
-  //     to: toName(link.to),
-  //     reason: link.reason,
-  //   }))
-  // );
 
   return sortedLinks;
 };
@@ -211,3 +216,38 @@ export const generateMermaidFromStateLinks = (
 
   return `${themeLine}\ngraph ${directionMermaid}\n${mermaidLines.join("\n")}`;
 };
+
+export const generateMermaidFromPathways = (
+  pathways: StateLink<any, any, {}>[][],
+  { theme = darkTheme, direction = "vertical" }: Options = {}
+) => {
+  const mermaidLines = pathways.reduce<string[]>(
+    (prev, links, i) => [
+      ...prev,
+      ...linksToMermaid(
+        links.map((link) => ({
+          ...link,
+          from: appendToId(i.toString(), link.from),
+          to: appendToId(i.toString(), link.to),
+        }))
+      ),
+    ],
+    []
+  );
+  const themeLine = `%%{init: ${JSON.stringify({
+    theme: "base",
+    themeVariables: theme,
+  })}}%%`;
+
+  const directionMermaid = direction === "horizontal" ? "LR" : "TD";
+
+  return `${themeLine}\ngraph ${directionMermaid}\n${mermaidLines.join("\n")}`;
+};
+
+const appendToId = (str: string, state: StateLinkNode<any, any, {}>) => ({
+  ...state,
+  _machiChartId: `${state._machiChartId}${str}`,
+});
+
+const generateMachiStateNodeId = (state: State<any, any, {}>): string =>
+  isFork(state) ? state.fork : state.id;
