@@ -1,6 +1,6 @@
 import { State } from "@josephluck/machi/src/machine";
 
-export const states: State<any, any, any>[] = [
+export const states: State<any, any, {}>[] = [
   {
     id: "What's your name",
     isDone: ["hasProvidedName"],

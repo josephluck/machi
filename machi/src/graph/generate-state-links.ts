@@ -75,7 +75,11 @@ export const generateStateLinks = <
           });
         }
         if (nextState || nextStateInParentLevel) {
-          const toState = nextState || nextStateInParentLevel;
+          const toState: State<
+            Context,
+            Conditions,
+            AdditionalEntryData
+          > = (nextState || nextStateInParentLevel)!;
           const existingSkippedFork = getExistingSkippedForkLink(
             result,
             state,
@@ -198,7 +202,7 @@ export const generateMermaid = (
   options: Options = {}
 ) =>
   generateMermaidFromStateLinks(
-    generateStateLinks(states) as StateLink<any, any, any>[],
+    generateStateLinks(states) as StateLink<any, any, {}>[],
     options
   );
 

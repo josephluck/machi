@@ -111,14 +111,14 @@ export const condNames = (conditions: (string | Predicate<any>)[]) =>
     isConditionKey(cond) ? cond : cond.name || "unknown"
   );
 
-export const makeId = (state: State<any, any, any> | undefined) =>
+export const makeId = (state: State<any, any, {}> | undefined) =>
   !state
     ? "undefined"
     : isFork(state)
     ? stringifyToId(state.fork)
     : stringifyToId(state.id);
 
-export const toName = (state: State<any, any, any> | undefined) =>
+export const toName = (state: State<any, any, {}> | undefined) =>
   !state ? "undefined" : isFork(state) ? state.fork : state.id;
 
 export const stringifyToId = (str: string) =>
@@ -138,8 +138,8 @@ export const getExistingSkippedForkLink = <
   AdditionalEntryData
 >(
   result: Link<Context, Conditions, AdditionalEntryData>[],
-  from: Fork<any, any, any>,
-  to: State<any, any, any>
+  from: Fork<any, any, {}>,
+  to: State<any, any, {}>
 ): Link<Context, Conditions, AdditionalEntryData> | undefined =>
   result.find(
     (link) =>
@@ -177,8 +177,8 @@ export const deduplicateLinks = <
     );
 
 export const areStatesIdentical = (
-  stateA: State<any, any, any>,
-  stateB: State<any, any, any>
+  stateA: State<any, any, {}>,
+  stateB: State<any, any, {}>
 ) => {
   if (isFork(stateA) && isEntry(stateB)) {
     return false;
@@ -227,14 +227,14 @@ export const filterInvalidLinks = <
  * a flattened list of states in logical order.
  */
 export const accumulateStates = (
-  states: State<any, any, any>[]
-): State<any, any, any>[] =>
+  states: State<any, any, {}>[]
+): State<any, any, {}>[] =>
   states.reduce(
     (acc, state) =>
       isFork(state)
         ? [...acc, state, ...accumulateStates(state.states)]
         : [...acc, state],
-    [] as State<any, any, any>[]
+    [] as State<any, any, {}>[]
   );
 
 export const isGroup = <

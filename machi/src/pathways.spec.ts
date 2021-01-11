@@ -12,22 +12,38 @@ import { extractFromNamesFromLinks, getPathwaysToState } from "./pathways";
  */
 
 describe("Possible paths through a machine that uses exclusive forks", () => {
-  const states: State<any, any, any>[] = [
+  const states: State<any, any, {}>[] = [
     {
       id: "E1",
-      isDone: [() => true],
+      isDone: [
+        function E1IsDone() {
+          return true;
+        },
+      ],
     },
     {
       fork: "F1",
-      requirements: [() => true],
+      requirements: [
+        function F1IsTrue() {
+          return true;
+        },
+      ],
       states: [
         {
           id: "E2",
-          isDone: [() => true],
+          isDone: [
+            function E2IsDone() {
+              return true;
+            },
+          ],
         },
         {
           fork: "F2",
-          requirements: [() => true],
+          requirements: [
+            function F2IsTrue() {
+              return true;
+            },
+          ],
           states: [
             {
               id: "E7",
@@ -37,27 +53,47 @@ describe("Possible paths through a machine that uses exclusive forks", () => {
         },
         {
           id: "E3",
-          isDone: [() => true],
+          isDone: [
+            function E3IsDone() {
+              return true;
+            },
+          ],
         },
       ],
     },
     {
       fork: "F1",
-      requirements: [() => true],
+      requirements: [
+        function F1IsFalse() {
+          return true;
+        },
+      ],
       states: [
         {
           id: "E4",
-          isDone: [() => true],
+          isDone: [
+            function E4IsDone() {
+              return true;
+            },
+          ],
         },
         {
           id: "E5",
-          isDone: [() => true],
+          isDone: [
+            function E5IsDone() {
+              return true;
+            },
+          ],
         },
       ],
     },
     {
       id: "E6",
-      isDone: [() => true],
+      isDone: [
+        function E6IsDone() {
+          return true;
+        },
+      ],
     },
   ];
 
@@ -107,22 +143,6 @@ describe("Possible paths through a machine that uses exclusive forks", () => {
     });
   });
 
-  it("generates charts for each possible pathway", async () => {
-    const result = getPathwaysToState("E6", states);
-    await Promise.all(
-      result.map((result, i) =>
-        generateChartFromLinks(
-          {
-            output: `../screenshots/tests/pathways-machine-mapped-result-${
-              i + 1
-            }.png`,
-          },
-          result
-        )
-      )
-    );
-  });
-
   it("generates a single chart for all possible pathways", async () => {
     const result = getPathwaysToState("E6", states);
     await generateChartFromPathways(
@@ -138,21 +158,37 @@ describe("Generates possible paths through a machine that uses skipped forks", (
   const states: State<{}, {}, {}>[] = [
     {
       id: "E1",
-      isDone: [() => true],
+      isDone: [
+        function E1IsDone() {
+          return true;
+        },
+      ],
     },
     {
       fork: "F1",
-      requirements: [() => true],
+      requirements: [
+        function F1IsTrue() {
+          return true;
+        },
+      ],
       states: [
         {
           id: "E2",
-          isDone: [() => true],
+          isDone: [
+            function E2IsDone() {
+              return true;
+            },
+          ],
         },
       ],
     },
     {
       id: "E3",
-      isDone: [() => true],
+      isDone: [
+        function E3IsDone() {
+          return true;
+        },
+      ],
     },
   ];
 

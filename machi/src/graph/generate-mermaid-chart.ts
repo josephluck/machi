@@ -117,7 +117,7 @@ const writeMermaidStringAsOutputFile = async (
 
 export const generateChart = async (
   opts: Partial<Options>,
-  states: State<any, any, any>[]
+  states: State<any, any, {}>[]
 ) => {
   try {
     const options = validateOptions(opts);
@@ -134,7 +134,7 @@ export const generateChart = async (
 
 export const generateChartFromLinks = async (
   opts: Partial<Options>,
-  states: StateLink<any, any, any>[]
+  states: StateLink<any, any, {}>[]
 ) => {
   try {
     const options = validateOptions(opts);
@@ -151,7 +151,7 @@ export const generateChartFromLinks = async (
 
 export const generateChartFromPathways = async (
   opts: Partial<Options>,
-  pathways: StateLink<any, any, any>[][]
+  pathways: StateLink<any, any, {}>[][]
 ) => {
   try {
     const options = validateOptions(opts);
