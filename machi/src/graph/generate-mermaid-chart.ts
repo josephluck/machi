@@ -18,7 +18,9 @@ export type Direction = "vertical" | "horizontal";
 
 export type Theme = "dark" | "light";
 
-export const supportedExtensions = ["pdf", "svg", "png"];
+export type SupportedExtension = "pdf" | "svg" | "png";
+
+export const supportedExtensions: SupportedExtension[] = ["pdf", "svg", "png"];
 
 type Options = {
   direction: Direction;
@@ -27,6 +29,7 @@ type Options = {
   theme: Theme;
   output: string;
   nodeModulesPath: string;
+  extension: SupportedExtension;
 };
 
 const writeTempFile = (options: Options, contents: string) => {
@@ -36,7 +39,10 @@ const writeTempFile = (options: Options, contents: string) => {
 };
 
 const writeMermaidSvg = async (options: Options, tempFilePath: string) => {
-  const outputPath = path.join(process.cwd(), options.output);
+  const outputPath = path.join(
+    process.cwd(),
+    `${options.output}.${options.extension}`
+  );
 
   const mermaidArgs = [
     ["-i", tempFilePath],
@@ -77,32 +83,16 @@ const writeMermaidSvg = async (options: Options, tempFilePath: string) => {
   }
 };
 
-const validateOutputExtension = (options: Options) => {
-  const parts = options.output.split(".");
-  const extension = parts[parts.length - 1];
-
-  if (!supportedExtensions.includes(extension)) {
-    throw new Error(
-      `${extension} output is not currently supported. Chart generation supports ${supportedExtensions.join(
-        ", "
-      )} files.`
-    );
-  }
-};
-
-const validateOptions = (options: Partial<Options>) => {
-  const opts: Options = {
-    direction: "vertical",
-    width: 600,
-    height: 600,
-    theme: "light",
-    output: path.join(process.cwd(), "chart.png"),
-    nodeModulesPath: path.join(process.cwd(), "../node_modules"),
-    ...options,
-  };
-  validateOutputExtension(opts);
-  return opts;
-};
+const validateOptions = (options: Partial<Options>): Options => ({
+  direction: "vertical",
+  width: 600,
+  height: 600,
+  theme: "light",
+  extension: "png",
+  output: path.join(process.cwd(), "chart"),
+  nodeModulesPath: path.join(process.cwd(), "../node_modules"),
+  ...options,
+});
 
 const writeMermaidStringAsOutputFile = async (
   options: Options,
@@ -129,6 +119,7 @@ export const generateChart = async <
       theme: options.theme === "dark" ? darkTheme : lightTheme,
       direction: options.direction,
     });
+    console.log({ mermaid });
     return writeMermaidStringAsOutputFile(options, mermaid);
   } catch (err) {
     console.error(err);

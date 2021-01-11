@@ -99,7 +99,7 @@ describe("Possible paths through a machine that uses exclusive forks", () => {
 
   it("generates the chart (for debugging purposes)", async () => {
     await generateChart(
-      { output: "../screenshots/tests/pathways-machine.png" },
+      { output: "../screenshots/tests/pathways-machine" },
       states
     );
   });
@@ -147,7 +147,7 @@ describe("Possible paths through a machine that uses exclusive forks", () => {
     const result = getPathwaysToState("E6", states);
     await generateChartFromPathways(
       {
-        output: `../screenshots/tests/pathways-machine-mapped-result-combined.png`,
+        output: `../screenshots/tests/pathways-machine-mapped-result-combined`,
       },
       result
     );
@@ -194,7 +194,7 @@ describe("Generates possible paths through a machine that uses skipped forks", (
 
   it("generates the chart (for debugging purposes)", async () => {
     await generateChart(
-      { output: "../screenshots/tests/pathways-machine-2.png" },
+      { output: "../screenshots/tests/pathways-machine-2" },
       states
     );
   });

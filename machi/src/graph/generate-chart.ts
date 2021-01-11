@@ -8,9 +8,12 @@ import { State } from "../machine";
 import {
   Direction,
   generateChart,
+  generateChartFromPathways,
+  SupportedExtension,
   supportedExtensions,
   Theme,
 } from "./generate-mermaid-chart";
+import { getPathwaysToState } from "../pathways";
 
 const spinner = makeSpinner();
 
@@ -30,15 +33,24 @@ const options = yargs(process.argv.slice(2)).options({
     type: "string",
     alias: "o",
     demandOption: true,
-    description: `Path to the output file the generated chart will be saved to including the extension. ${supportedExtensions.join(
-      ", "
-    )} extensions are supported. The path is relative to the working directory this script is run from.`,
+    description: `Path to the output file the generated chart will be saved to. Please provide the extension using the --extension option. The path is relative to the working directory this script is run from.`,
+  },
+  extension: {
+    choices: supportedExtensions,
+    default: "png" as SupportedExtension,
+    description: "The extension of the output file.",
   },
   direction: {
     alias: "d",
     choices: directionChoice,
     default: "vertical" as Direction,
     description: "The direction of the generated chart",
+  },
+  paths: {
+    type: "string",
+    alias: "p",
+    description:
+      "When provided, will generate a chart listing all the possible pathways to this state. Provide an entry id or a fork name",
   },
   theme: {
     alias: "t",
@@ -91,7 +103,12 @@ const run = async () => {
   try {
     spinner.start("Generating chart");
     const states = readStatesFromFile();
-    const outputPath = await generateChart(options, states);
+    const outputPath = options.paths
+      ? await generateChartFromPathways(
+          options,
+          getPathwaysToState(options.paths, states)
+        )
+      : await generateChart(options, states);
     spinner.succeed(`Chart generated to ${outputPath}`);
   } catch (err) {
     spinner.fail(err.message);

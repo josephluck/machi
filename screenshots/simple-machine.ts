@@ -1,4 +1,12 @@
-const states = [
+import { State } from "@josephluck/machi/src/machine";
+
+type Conditions = {
+  hasProvidedName: () => boolean;
+  hasProvidedAge: () => boolean;
+  isOfLegalDrinkingAge: () => boolean;
+};
+
+const states: State<{}, Conditions, {}>[] = [
   {
     id: "What's your name",
     isDone: ["hasProvidedName"],

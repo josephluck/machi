@@ -127,7 +127,7 @@ export const generateStateLinks = <
           > = (nextState || nextStateInParentLevel)!;
           result.push({
             type: "link",
-            from: { ...state, _machiChartId: state.id },
+            from: generateMachiStateNodeId(state),
             to: generateMachiStateNodeId(s),
             reason: REASONS.ENTRY_DONE,
           });
@@ -245,6 +245,7 @@ export const generateMermaidFromPathways = <
     ],
     []
   );
+  console.log(mermaidLines);
   const themeLine = `%%{init: ${JSON.stringify({
     theme: "base",
     themeVariables: theme,
@@ -267,7 +268,7 @@ const appendToId = <
   _machiChartId: `${state._machiChartId}${str}`,
 });
 
-const generateMachiStateNodeId = <
+export const generateMachiStateNodeId = <
   Context,
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
@@ -275,5 +276,5 @@ const generateMachiStateNodeId = <
   state: State<Context, Conditions, AdditionalEntryData>
 ): StateLinkNode<Context, Conditions, AdditionalEntryData> => ({
   ...state,
-  _machiChartId: isFork(state) ? state.fork : state.id,
+  _machiChartId: makeId(state),
 });

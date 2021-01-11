@@ -353,7 +353,7 @@ const states = [
 export default states;
 ```
 
-In order to run the generation, you must have `ts-node` installed globally on your machine:
+In order to run the generation CLI, you must have `ts-node` installed globally on your machine:
 
 ```bash
 yarn global add ts-node
@@ -363,7 +363,7 @@ yarn global add ts-node
 yarn install -g ts-node
 ```
 
-Then, you're able to run the generation
+Then, you're able to run the generation:
 
 ```bash
 ts-node ./node_modules/@josephluck/machi/src/graph/generate-chart.ts --states ./path/to/my/states.ts --output ./path/to/my/output.svg
@@ -374,3 +374,90 @@ For all the options, run the help script:
 ```bash
 ts-node ./node_modules/@josephluck/machi/src/graph/generate-chart.ts --help
 ```
+
+It's also possible to run the chart generation as a module (by importing `generateChart` from `@josephluck/machi/machi/src/graph/generate-mermaid-chart.ts`). Sometimes it's useful to run the chart generation during tests (using jest or similar).
+
+#### Example
+
+Take the following machine:
+
+```typescript
+// possible-paths.ts
+import { State } from "@josephluck/machi/src/machine";
+
+type Conditions = {
+  hasChosenAuthType: () => boolean;
+  isExistingCustomer: () => boolean;
+  isNewCustomer: () => boolean;
+  hasSeenAboutUs: () => boolean;
+  hasProvidedEmail: () => boolean;
+  hasProvidedPassword: () => boolean;
+  hasProvidedName: () => boolean;
+  hasNotProvidedName: () => boolean;
+};
+
+const states: State<{}, Conditions, {}>[] = [
+  {
+    id: "Splash screen",
+    isDone: ["hasChosenAuthType"],
+  },
+  {
+    fork: "Is existing customer?",
+    requirements: ["isExistingCustomer"],
+    states: [
+      {
+        id: "What's your email address?",
+        isDone: ["hasProvidedEmail"],
+      },
+      {
+        id: "What's your password?",
+        isDone: ["hasProvidedPassword"],
+      },
+    ],
+  },
+  {
+    fork: "Is existing customer?",
+    requirements: ["isNewCustomer"],
+    states: [
+      {
+        id: "About us",
+        isDone: ["hasSeenAboutUs"],
+      },
+      {
+        id: "Please enter your email address",
+        isDone: ["hasProvidedEmail"],
+      },
+      {
+        id: "Please choose a password",
+        isDone: ["hasProvidedPassword"],
+      },
+    ],
+  },
+  {
+    id: "What's your name?",
+    isDone: ["hasProvidedName"],
+  },
+];
+
+export default states;
+```
+
+Then run the chart generation:
+
+```bash
+ts-node ./node_modules/@josephluck/machi/machi/src/graph/generate-chart.ts -s possible-paths.ts -o possible-paths
+```
+
+Which results in the following chart:
+
+![possible paths](https://github.com/josephluck/machi/blob/master/screenshots/possible-paths.png?raw=true)
+
+It's also possible to generate a chart that lists all the possible paths to a particular state (by name) by passing the `--paths` option:
+
+```bash
+ts-node ./node_modules/@josephluck/machi/machi/src/graph/generate-chart.ts -s possible-paths.ts -o possible-paths  --paths="What's your name?"
+```
+
+Which results in the following chart:
+
+![possible paths paths](https://github.com/josephluck/machi/blob/master/screenshots/possible-paths-paths.png?raw=true)
