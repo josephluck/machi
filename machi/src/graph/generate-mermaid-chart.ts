@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import execa from "execa";
 
-import { State } from "../machine";
+import { ConditionsMap, State } from "../machine";
 import {
   darkTheme,
   generateMermaid,
@@ -115,9 +115,13 @@ const writeMermaidStringAsOutputFile = async (
   return outputPath;
 };
 
-export const generateChart = async (
+export const generateChart = async <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
   opts: Partial<Options>,
-  states: State<any, any, {}>[]
+  states: State<Context, Conditions, AdditionalEntryData>[]
 ) => {
   try {
     const options = validateOptions(opts);
@@ -132,9 +136,13 @@ export const generateChart = async (
   }
 };
 
-export const generateChartFromLinks = async (
+export const generateChartFromLinks = async <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
   opts: Partial<Options>,
-  states: StateLink<any, any, {}>[]
+  states: StateLink<Context, Conditions, AdditionalEntryData>[]
 ) => {
   try {
     const options = validateOptions(opts);
@@ -149,9 +157,13 @@ export const generateChartFromLinks = async (
   }
 };
 
-export const generateChartFromPathways = async (
+export const generateChartFromPathways = async <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
   opts: Partial<Options>,
-  pathways: StateLink<any, any, {}>[][]
+  pathways: StateLink<Context, Conditions, AdditionalEntryData>[][]
 ) => {
   try {
     const options = validateOptions(opts);

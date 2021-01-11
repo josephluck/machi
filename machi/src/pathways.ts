@@ -1,10 +1,10 @@
 import { generateStateLinks } from "./graph/generate-state-links";
 import { StateLink } from "./graph/utils";
-import { Condition, isFork, State } from "./machine";
+import { ConditionsMap, isFork, State } from "./machine";
 
 const pathways = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   toName: string,
@@ -32,7 +32,7 @@ const pathways = <
 
 export const getPathwaysToState = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   toName: string,
@@ -42,7 +42,7 @@ export const getPathwaysToState = <
 
 const findLinksToState = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   name: string,
@@ -54,7 +54,7 @@ const findLinksToState = <
 
 export const extractFromNamesFromLinks = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   links: StateLink<Context, Conditions, AdditionalEntryData>[]
@@ -62,7 +62,7 @@ export const extractFromNamesFromLinks = <
 
 const extractFromNameFromLink = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   link: StateLink<Context, Conditions, AdditionalEntryData>

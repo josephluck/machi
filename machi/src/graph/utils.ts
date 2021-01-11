@@ -4,8 +4,8 @@ import {
   isEntry,
   Fork,
   isConditionKey,
-  Condition,
   Predicate,
+  ConditionsMap,
 } from "../machine";
 
 export enum REASONS {
@@ -22,13 +22,13 @@ type Group = {
 
 export type StateLinkNode<
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 > = { _machiChartId: string } & State<Context, Conditions, AdditionalEntryData>;
 
 export type StateLink<
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 > = {
   type: "link";
@@ -39,13 +39,13 @@ export type StateLink<
 
 export type Link<
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 > = Group | StateLink<Context, Conditions, AdditionalEntryData>;
 
 export const linksToMermaid = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   result: Link<Context, Conditions, AdditionalEntryData>[]
@@ -111,15 +111,26 @@ export const condNames = (conditions: (string | Predicate<any>)[]) =>
     isConditionKey(cond) ? cond : cond.name || "unknown"
   );
 
-export const makeId = (state: State<any, any, {}> | undefined) =>
+export const makeId = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  state: State<Context, Conditions, AdditionalEntryData> | undefined
+) =>
   !state
     ? "undefined"
     : isFork(state)
     ? stringifyToId(state.fork)
     : stringifyToId(state.id);
 
-export const toName = (state: State<any, any, {}> | undefined) =>
-  !state ? "undefined" : isFork(state) ? state.fork : state.id;
+export const toName = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  state: State<Context, Conditions, AdditionalEntryData> | undefined
+) => (!state ? "undefined" : isFork(state) ? state.fork : state.id);
 
 export const stringifyToId = (str: string) =>
   str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
@@ -134,12 +145,12 @@ export const stringifyToId = (str: string) =>
  */
 export const getExistingSkippedForkLink = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   result: Link<Context, Conditions, AdditionalEntryData>[],
-  from: Fork<any, any, {}>,
-  to: State<any, any, {}>
+  from: Fork<Context, Conditions, AdditionalEntryData>,
+  to: State<Context, Conditions, AdditionalEntryData>
 ): Link<Context, Conditions, AdditionalEntryData> | undefined =>
   result.find(
     (link) =>
@@ -156,7 +167,7 @@ export const getExistingSkippedForkLink = <
  */
 export const deduplicateLinks = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   result: Link<Context, Conditions, AdditionalEntryData>[]
@@ -176,9 +187,13 @@ export const deduplicateLinks = <
           )
     );
 
-export const areStatesIdentical = (
-  stateA: State<any, any, {}>,
-  stateB: State<any, any, {}>
+export const areStatesIdentical = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  stateA: State<Context, Conditions, AdditionalEntryData>,
+  stateB: State<Context, Conditions, AdditionalEntryData>
 ) => {
   if (isFork(stateA) && isEntry(stateB)) {
     return false;
@@ -197,7 +212,8 @@ export const areStatesIdentical = (
   }
   if (isEntry(stateA) && isEntry(stateB)) {
     return (
-      condNames(stateA.isDone).join("") === condNames(stateB.isDone).join("")
+      condNames(stateA.isDone as string[]).join("") ===
+      condNames(stateB.isDone as string[]).join("")
     );
   }
   return false;
@@ -205,7 +221,7 @@ export const areStatesIdentical = (
 
 export const filterInvalidLinks = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   states: State<Context, Conditions, AdditionalEntryData>[],
@@ -226,20 +242,24 @@ export const filterInvalidLinks = <
  * Takes a list of potentially nested states (if forks are present) and returns
  * a flattened list of states in logical order.
  */
-export const accumulateStates = (
-  states: State<any, any, {}>[]
-): State<any, any, {}>[] =>
+export const accumulateStates = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  states: State<Context, Conditions, AdditionalEntryData>[]
+): State<Context, Conditions, AdditionalEntryData>[] =>
   states.reduce(
     (acc, state) =>
       isFork(state)
         ? [...acc, state, ...accumulateStates(state.states)]
         : [...acc, state],
-    [] as State<any, any, {}>[]
+    [] as State<Context, Conditions, AdditionalEntryData>[]
   );
 
 export const isGroup = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   link: Link<Context, Conditions, AdditionalEntryData>
@@ -247,7 +267,7 @@ export const isGroup = <
 
 export const sortLinks = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   links: Link<Context, Conditions, AdditionalEntryData>[]

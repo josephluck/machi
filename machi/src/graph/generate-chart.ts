@@ -68,7 +68,7 @@ const options = yargs(process.argv.slice(2)).options({
   },
 }).argv;
 
-const readStatesFromFile = (): State<any, any, {}>[] => {
+const readStatesFromFile = (): State<{}, {}, {}>[] => {
   const filePath = path.join(process.cwd(), options.states);
   const baseErrMessage = `Could not import states from ${filePath}`;
   const file = require(filePath);
@@ -86,6 +86,7 @@ const readStatesFromFile = (): State<any, any, {}>[] => {
   }
   return states;
 };
+
 const run = async () => {
   try {
     spinner.start("Generating chart");

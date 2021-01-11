@@ -1,4 +1,4 @@
-import { Condition, isEntry, isFork, State } from "../machine";
+import { ConditionsMap, isEntry, isFork, State } from "../machine";
 import {
   deduplicateLinks,
   Link,
@@ -20,7 +20,7 @@ import {
  */
 export const generateStateLinks = <
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
   states: State<Context, Conditions, AdditionalEntryData>[]
@@ -49,11 +49,8 @@ export const generateStateLinks = <
       if (isFork(state)) {
         result.push({
           type: "link",
-          from: { ...state, _machiChartId: generateMachiStateNodeId(state) },
-          to: {
-            ...state.states[0],
-            _machiChartId: generateMachiStateNodeId(state.states[0]),
-          },
+          from: generateMachiStateNodeId(state),
+          to: generateMachiStateNodeId(state.states[0]),
           reason: REASONS.FORK_ENTERED,
         });
         if (state.chartGroup) {
@@ -114,14 +111,8 @@ export const generateStateLinks = <
           } else if (toState) {
             result.push({
               type: "link",
-              from: {
-                ...state,
-                _machiChartId: generateMachiStateNodeId(state),
-              },
-              to: {
-                ...toState,
-                _machiChartId: generateMachiStateNodeId(toState),
-              },
+              from: generateMachiStateNodeId(state),
+              to: generateMachiStateNodeId(toState),
               reason: REASONS.FORK_SKIPPED,
             });
           }
@@ -137,7 +128,7 @@ export const generateStateLinks = <
           result.push({
             type: "link",
             from: { ...state, _machiChartId: state.id },
-            to: { ...s, _machiChartId: generateMachiStateNodeId(s) },
+            to: generateMachiStateNodeId(s),
             reason: REASONS.ENTRY_DONE,
           });
         }
@@ -197,17 +188,29 @@ type Options = {
   direction?: Direction;
 };
 
-export const generateMermaid = (
-  states: State<any, any, {}>[],
+export const generateMermaid = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  states: State<Context, Conditions, AdditionalEntryData>[],
   options: Options = {}
 ) =>
   generateMermaidFromStateLinks(
-    generateStateLinks(states) as StateLink<any, any, {}>[],
+    generateStateLinks(states) as StateLink<
+      Context,
+      Conditions,
+      AdditionalEntryData
+    >[],
     options
   );
 
-export const generateMermaidFromStateLinks = (
-  links: StateLink<any, any, {}>[],
+export const generateMermaidFromStateLinks = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  links: StateLink<Context, Conditions, AdditionalEntryData>[],
   { theme = darkTheme, direction = "vertical" }: Options = {}
 ) => {
   const mermaidLines = linksToMermaid(links);
@@ -221,8 +224,12 @@ export const generateMermaidFromStateLinks = (
   return `${themeLine}\ngraph ${directionMermaid}\n${mermaidLines.join("\n")}`;
 };
 
-export const generateMermaidFromPathways = (
-  pathways: StateLink<any, any, {}>[][],
+export const generateMermaidFromPathways = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  pathways: StateLink<Context, Conditions, AdditionalEntryData>[][],
   { theme = darkTheme, direction = "vertical" }: Options = {}
 ) => {
   const mermaidLines = pathways.reduce<string[]>(
@@ -248,10 +255,25 @@ export const generateMermaidFromPathways = (
   return `${themeLine}\ngraph ${directionMermaid}\n${mermaidLines.join("\n")}`;
 };
 
-const appendToId = (str: string, state: StateLinkNode<any, any, {}>) => ({
+const appendToId = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  str: string,
+  state: StateLinkNode<Context, Conditions, AdditionalEntryData>
+): StateLinkNode<Context, Conditions, AdditionalEntryData> => ({
   ...state,
   _machiChartId: `${state._machiChartId}${str}`,
 });
 
-const generateMachiStateNodeId = (state: State<any, any, {}>): string =>
-  isFork(state) ? state.fork : state.id;
+const generateMachiStateNodeId = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  state: State<Context, Conditions, AdditionalEntryData>
+): StateLinkNode<Context, Conditions, AdditionalEntryData> => ({
+  ...state,
+  _machiChartId: isFork(state) ? state.fork : state.id,
+});

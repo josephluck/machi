@@ -1,12 +1,14 @@
 export type Predicate<Context> = (context: Context) => boolean;
 
+export type ConditionsMap<Context> = Record<string, Condition<Context>>;
+
 /**
  * An entry within the flow. An entry represents a single (potentially) terminal
  * node within the flow
  */
 export type Entry<
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData = never
 > = AdditionalEntryData extends never
   ? {
@@ -30,7 +32,7 @@ export type Entry<
  */
 export type Fork<
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 > = {
   fork: string;
@@ -49,7 +51,7 @@ export type Fork<
  */
 export type State<
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 > =
   | Fork<Context, Conditions, AdditionalEntryData>
@@ -62,7 +64,7 @@ export type Condition<Context> = (context: Context) => boolean;
 
 export type ExecuteResult<
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 > = {
   entry: Entry<Context, Conditions, AdditionalEntryData>;
@@ -71,7 +73,7 @@ export type ExecuteResult<
 
 export type ExecuteMachine<
   Context,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 > = (
   context: Context,
@@ -86,10 +88,7 @@ export type ExecuteMachine<
 export const makeMachine = <
   Context extends any = void,
   AdditionalEntryData extends {} = never,
-  Conditions extends { [key: string]: Condition<Context> } = Record<
-    string,
-    Condition<Context>
-  >
+  Conditions extends ConditionsMap<Context> = Record<string, Condition<Context>>
 >(
   /**
    * The states in the machine.
@@ -269,7 +268,7 @@ export const makeMachine = <
 
 export const isFork = <
   Context extends any,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>
@@ -281,7 +280,7 @@ export const isFork = <
 
 export const isEntry = <
   Context extends any,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>
@@ -293,7 +292,7 @@ export const isEntry = <
  */
 export const isForkEntered = <
   Context extends any,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>,
@@ -301,10 +300,10 @@ export const isForkEntered = <
   evaluatedConditions: Record<keyof Conditions, boolean>
 ): state is Fork<Context, Conditions, AdditionalEntryData> =>
   isFork<Context, Conditions, AdditionalEntryData>(state) &&
-  state.requirements.every((cond) =>
-    isConditionKey<Conditions, Context>(cond)
-      ? evaluatedConditions[cond]
-      : cond(context)
+  state.requirements.every((condition) =>
+    isConditionKey<Conditions, Context>(condition)
+      ? evaluatedConditions[condition]
+      : condition(context)
   );
 
 /**
@@ -313,7 +312,7 @@ export const isForkEntered = <
  */
 export const isEntryDone = <
   Context extends any,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>,
@@ -321,10 +320,10 @@ export const isEntryDone = <
   evaluatedConditions: Record<keyof Conditions, boolean>
 ): state is Entry<Context, Conditions, AdditionalEntryData> =>
   isEntry<Context, Conditions, AdditionalEntryData>(state) &&
-  state.isDone.every((cond) =>
-    isConditionKey<Conditions, Context>(cond)
-      ? evaluatedConditions[cond]
-      : cond(context)
+  state.isDone.every((condition) =>
+    isConditionKey<Conditions, Context>(condition)
+      ? evaluatedConditions[condition]
+      : condition(context)
   );
 
 /**
@@ -334,7 +333,7 @@ export const isEntryDone = <
  */
 export const isEntryNext = <
   Context extends any,
-  Conditions extends { [key: string]: Condition<Context> },
+  Conditions extends ConditionsMap<Context>,
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>,
@@ -342,8 +341,10 @@ export const isEntryNext = <
   evaluatedConditions: Record<keyof Conditions, boolean>
 ): state is Entry<Context, Conditions, AdditionalEntryData> =>
   isEntry<Context, Conditions, AdditionalEntryData>(state) &&
-  state.isDone.some((cond) =>
-    isConditionKey(cond) ? !evaluatedConditions[cond] : !cond(context)
+  state.isDone.some((condition) =>
+    isConditionKey(condition)
+      ? !evaluatedConditions[condition]
+      : !condition(context)
   );
 
 export const isConditionKey = <Conditions, Context>(
