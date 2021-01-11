@@ -1,4 +1,12 @@
-import { State, isFork, isEntry, Fork, isConditionKey } from "../machine";
+import {
+  State,
+  isFork,
+  isEntry,
+  Fork,
+  isConditionKey,
+  Condition,
+  Predicate,
+} from "../machine";
 
 export enum REASONS {
   ENTRY_DONE = "ENTRY_DONE",
@@ -12,16 +20,30 @@ type Group = {
   id: string;
 };
 
-export type Link =
-  | Group
-  | {
-      type: "link";
-      from: State<any, any, any>;
-      to: State<any, any, any>;
-      reason: REASONS;
-    };
+export type StateLink<
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+> = {
+  type: "link";
+  from: State<Context, Conditions, AdditionalEntryData>;
+  to: State<Context, Conditions, AdditionalEntryData>;
+  reason: REASONS;
+};
 
-export const linksToMermaid = (result: Link[]) =>
+export type Link<
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+> = Group | StateLink<Context, Conditions, AdditionalEntryData>;
+
+export const linksToMermaid = <
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+>(
+  result: Link<Context, Conditions, AdditionalEntryData>[]
+) =>
   result.reduce((prev: any, link) => {
     if (isGroup(link)) {
       const line = link.end ? "end" : `subgraph ${toId(link.id)} [${link.id}]`;
@@ -38,7 +60,7 @@ export const linksToMermaid = (result: Link[]) =>
           ? "false"
           : "unknown";
       const arrow = link.reason === REASONS.FORK_SKIPPED ? "-.->" : "-->";
-      const reqs = `|${condNames(link.from.requirements).join(
+      const reqs = `|${condNames(link.from.requirements as string[]).join(
         " and "
       )} ${isAre} ${truthy}|`;
 
@@ -58,14 +80,14 @@ export const linksToMermaid = (result: Link[]) =>
       const toId = makeId(link.to);
       const isAre = link.from.isDone.length > 1 ? "are" : "is";
       if (isEntry(link.to)) {
-        const reqs = `|${condNames(link.from.isDone).join(
+        const reqs = `|${condNames(link.from.isDone as string[]).join(
           " and "
         )} ${isAre} true|`;
         const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}[${link.to.id}]`;
         return [...prev, line];
       }
       if (isFork(link.to)) {
-        const reqs = `|${condNames(link.from.isDone).join(
+        const reqs = `|${condNames(link.from.isDone as string[]).join(
           " and "
         )} ${isAre} true|`;
         const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}{${
@@ -77,7 +99,7 @@ export const linksToMermaid = (result: Link[]) =>
     }
   }, []);
 
-export const condNames = (conditions: (string | ((ctx: any) => boolean))[]) =>
+export const condNames = (conditions: (string | Predicate<any>)[]) =>
   conditions.map((cond) =>
     isConditionKey(cond) ? cond : cond.name || "unknown"
   );
@@ -99,11 +121,15 @@ export const toId = (str: string) =>
  * destinations. If this isn't done then multiple links will exist per skipped
  * instance of a fork. Usually if the fork is binary, this isn't a problem.
  */
-export const getExistingSkippedForkLink = (
-  result: Link[],
+export const getExistingSkippedForkLink = <
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+>(
+  result: Link<Context, Conditions, AdditionalEntryData>[],
   from: Fork<any, any, any>,
   to: State<any, any, any>
-): Link | undefined =>
+): Link<Context, Conditions, AdditionalEntryData> | undefined =>
   result.find(
     (link) =>
       !isGroup(link) &&
@@ -117,7 +143,13 @@ export const getExistingSkippedForkLink = (
  * Takes a list of links and removes the duplicate links where the from, to and
  * reason are all identical
  */
-export const deduplicateLinks = (result: Link[]): Link[] =>
+export const deduplicateLinks = <
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+>(
+  result: Link<Context, Conditions, AdditionalEntryData>[]
+): Link<Context, Conditions, AdditionalEntryData>[] =>
   result
     .filter((link) => isGroup(link) || makeId(link.from) !== makeId(link.to))
     .filter(
@@ -148,8 +180,8 @@ export const areStatesIdentical = (
   }
   if (isFork(stateA) && isFork(stateB)) {
     return (
-      condNames(stateA.requirements).join("") ===
-      condNames(stateB.requirements).join("")
+      condNames(stateA.requirements as string[]).join("") ===
+      condNames(stateB.requirements as string[]).join("")
     );
   }
   if (isEntry(stateA) && isEntry(stateB)) {
@@ -160,10 +192,14 @@ export const areStatesIdentical = (
   return false;
 };
 
-export const filterInvalidLinks = (
-  states: State<any, any, any>[],
-  result: Link[]
-): Link[] => {
+export const filterInvalidLinks = <
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+>(
+  states: State<Context, Conditions, AdditionalEntryData>[],
+  result: Link<Context, Conditions, AdditionalEntryData>[]
+): Link<Context, Conditions, AdditionalEntryData>[] => {
   const orderedIds = accumulateStates(states).map(makeId);
   return result.filter((link) => {
     if (isGroup(link)) {
@@ -190,9 +226,21 @@ export const accumulateStates = (
     [] as State<any, any, any>[]
   );
 
-export const isGroup = (link: Link): link is Group => link.type === "group";
+export const isGroup = <
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+>(
+  link: Link<Context, Conditions, AdditionalEntryData>
+): link is Group => link.type === "group";
 
-export const sortLinks = (links: Link[]): Link[] =>
+export const sortLinks = <
+  Context,
+  Conditions extends { [key: string]: Condition<Context> },
+  AdditionalEntryData
+>(
+  links: Link<Context, Conditions, AdditionalEntryData>[]
+): Link<Context, Conditions, AdditionalEntryData>[] =>
   links.sort((linkA, linkB) => {
     if (
       !isGroup(linkA) &&

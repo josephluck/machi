@@ -1,4 +1,4 @@
-type Predicate<Context> = (context: Context) => boolean;
+export type Predicate<Context> = (context: Context) => boolean;
 
 /**
  * An entry within the flow. An entry represents a single (potentially) terminal
@@ -6,7 +6,7 @@ type Predicate<Context> = (context: Context) => boolean;
  */
 export type Entry<
   Context,
-  Conditions extends Record<string, Condition<Context>>,
+  Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData = never
 > = AdditionalEntryData extends never
   ? {
@@ -30,7 +30,7 @@ export type Entry<
  */
 export type Fork<
   Context,
-  Conditions extends Record<string, Condition<Context>>,
+  Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData
 > = {
   fork: string;
@@ -49,7 +49,7 @@ export type Fork<
  */
 export type State<
   Context,
-  Conditions extends Record<string, Condition<Context>>,
+  Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData
 > =
   | Fork<Context, Conditions, AdditionalEntryData>
@@ -62,7 +62,7 @@ export type Condition<Context> = (context: Context) => boolean;
 
 export type ExecuteResult<
   Context,
-  Conditions extends Record<string, Condition<Context>>,
+  Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData
 > = {
   entry: Entry<Context, Conditions, AdditionalEntryData>;
@@ -71,7 +71,7 @@ export type ExecuteResult<
 
 export type ExecuteMachine<
   Context,
-  Conditions extends Record<string, Condition<Context>>,
+  Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData
 > = (
   context: Context,
@@ -86,7 +86,7 @@ export type ExecuteMachine<
 export const makeMachine = <
   Context extends any = void,
   AdditionalEntryData extends {} = never,
-  Conditions extends Record<string, Condition<Context>> = Record<
+  Conditions extends { [key: string]: Condition<Context> } = Record<
     string,
     Condition<Context>
   >
@@ -269,7 +269,7 @@ export const makeMachine = <
 
 export const isFork = <
   Context extends any,
-  Conditions extends Record<string, Condition<Context>>,
+  Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>
@@ -281,7 +281,7 @@ export const isFork = <
 
 export const isEntry = <
   Context extends any,
-  Conditions extends Record<string, Condition<Context>>,
+  Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>
@@ -293,7 +293,7 @@ export const isEntry = <
  */
 export const isForkEntered = <
   Context extends any,
-  Conditions extends Record<string, Condition<Context>>,
+  Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>,
@@ -313,7 +313,7 @@ export const isForkEntered = <
  */
 export const isEntryDone = <
   Context extends any,
-  Conditions extends Record<string, Condition<Context>>,
+  Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>,
@@ -334,7 +334,7 @@ export const isEntryDone = <
  */
 export const isEntryNext = <
   Context extends any,
-  Conditions extends Record<string, Condition<Context>>,
+  Conditions extends { [key: string]: Condition<Context> },
   AdditionalEntryData extends {} = {}
 >(
   state: State<Context, Conditions, AdditionalEntryData>,
