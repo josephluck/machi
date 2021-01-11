@@ -245,7 +245,6 @@ export const generateMermaidFromPathways = <
     ],
     []
   );
-  console.log(mermaidLines);
   const themeLine = `%%{init: ${JSON.stringify({
     theme: "base",
     themeVariables: theme,
