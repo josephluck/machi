@@ -11,8 +11,8 @@ import {
   generateMermaidFromPathways,
   generateMermaidFromStateLinks,
   lightTheme,
-} from "./generate-state-links";
-import { StateLink } from "./utils";
+} from "./generate-mermaid-string";
+import { StateLink } from "./generate-state-links";
 
 export type Direction = "vertical" | "horizontal";
 
@@ -30,6 +30,69 @@ type Options = {
   output: string;
   nodeModulesPath: string;
   extension: SupportedExtension;
+};
+
+export const generateChart = async <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  opts: Partial<Options>,
+  states: State<Context, Conditions, AdditionalEntryData>[]
+) => {
+  try {
+    const options = validateOptions(opts);
+    const mermaid = generateMermaid(states, {
+      theme: options.theme === "dark" ? darkTheme : lightTheme,
+      direction: options.direction,
+    });
+    return writeMermaidStringAsOutputFile(options, mermaid);
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+};
+
+export const generateChartFromLinks = async <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  opts: Partial<Options>,
+  states: StateLink<Context, Conditions, AdditionalEntryData>[]
+) => {
+  try {
+    const options = validateOptions(opts);
+    const mermaid = generateMermaidFromStateLinks(states, {
+      theme: options.theme === "dark" ? darkTheme : lightTheme,
+      direction: options.direction,
+    });
+    return writeMermaidStringAsOutputFile(options, mermaid);
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+};
+
+export const generateChartFromPathways = async <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  opts: Partial<Options>,
+  pathways: StateLink<Context, Conditions, AdditionalEntryData>[][]
+) => {
+  try {
+    const options = validateOptions(opts);
+    const mermaid = generateMermaidFromPathways(pathways, {
+      theme: options.theme === "dark" ? darkTheme : lightTheme,
+      direction: options.direction,
+    });
+    return writeMermaidStringAsOutputFile(options, mermaid);
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
 };
 
 const writeTempFile = (options: Options, contents: string) => {
@@ -103,70 +166,6 @@ const writeMermaidStringAsOutputFile = async (
   fs.unlinkSync(tempFilePath);
   console.log(`Chart written to ${outputPath}`);
   return outputPath;
-};
-
-export const generateChart = async <
-  Context,
-  Conditions extends ConditionsMap<Context>,
-  AdditionalEntryData
->(
-  opts: Partial<Options>,
-  states: State<Context, Conditions, AdditionalEntryData>[]
-) => {
-  try {
-    const options = validateOptions(opts);
-    const mermaid = generateMermaid(states, {
-      theme: options.theme === "dark" ? darkTheme : lightTheme,
-      direction: options.direction,
-    });
-    console.log({ mermaid });
-    return writeMermaidStringAsOutputFile(options, mermaid);
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-};
-
-export const generateChartFromLinks = async <
-  Context,
-  Conditions extends ConditionsMap<Context>,
-  AdditionalEntryData
->(
-  opts: Partial<Options>,
-  states: StateLink<Context, Conditions, AdditionalEntryData>[]
-) => {
-  try {
-    const options = validateOptions(opts);
-    const mermaid = generateMermaidFromStateLinks(states, {
-      theme: options.theme === "dark" ? darkTheme : lightTheme,
-      direction: options.direction,
-    });
-    return writeMermaidStringAsOutputFile(options, mermaid);
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-};
-
-export const generateChartFromPathways = async <
-  Context,
-  Conditions extends ConditionsMap<Context>,
-  AdditionalEntryData
->(
-  opts: Partial<Options>,
-  pathways: StateLink<Context, Conditions, AdditionalEntryData>[][]
-) => {
-  try {
-    const options = validateOptions(opts);
-    const mermaid = generateMermaidFromPathways(pathways, {
-      theme: options.theme === "dark" ? darkTheme : lightTheme,
-      direction: options.direction,
-    });
-    return writeMermaidStringAsOutputFile(options, mermaid);
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
 };
 
 const flatten = <A>(arr: A[][]): A[] =>

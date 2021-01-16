@@ -12,7 +12,7 @@ import {
   SupportedExtension,
   supportedExtensions,
   Theme,
-} from "./generate-mermaid-chart";
+} from "./files";
 import { getPathwaysToState } from "../pathways";
 
 const spinner = makeSpinner();

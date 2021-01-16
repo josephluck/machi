@@ -1,5 +1,4 @@
-import { generateStateLinks } from "./graph/generate-state-links";
-import { StateLink } from "./graph/utils";
+import { generateStateLinks, StateLink } from "./graph/generate-state-links";
 import { ConditionsMap, isForkInternal, State } from "./machine";
 
 const pathways = <
@@ -26,11 +25,9 @@ const pathways = <
       extractFromInternalIdFromLink(branch)
     );
 
-    if (ways.length) {
-      return ways.reduce((acc, way) => [...way, ...acc, branch], []);
-    }
-
-    return [branch];
+    return ways.length
+      ? ways.reduce((acc, way) => [...way, ...acc], [branch])
+      : [branch];
   });
 };
 

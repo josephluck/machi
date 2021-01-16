@@ -6,9 +6,9 @@
     "examples/*"
   ],
   "scripts": {
-    "generate-simple-chart": "ts-node ./machi/src/graph/generate-chart.ts -s screenshots/simple-machine.ts -o screenshots/simple-machine",
-    "generate-possible-paths-paths-chart": "ts-node ./machi/src/graph/generate-chart.ts -s screenshots/possible-paths.ts -o screenshots/possible-paths-paths --paths=\"What's your name?\"",
-    "generate-possible-paths-chart": "ts-node ./machi/src/graph/generate-chart.ts -s screenshots/possible-paths.ts -o screenshots/possible-paths",
+    "generate-simple-chart": "ts-node ./machi/src/graph/cli.ts -s screenshots/simple-machine.ts -o screenshots/simple-machine",
+    "generate-possible-paths-paths-chart": "ts-node ./machi/src/graph/cli.ts -s screenshots/possible-paths.ts -o screenshots/possible-paths-paths --paths=\"What's your name?\"",
+    "generate-possible-paths-chart": "ts-node ./machi/src/graph/cli.ts -s screenshots/possible-paths.ts -o screenshots/possible-paths",
     "generate-readme-charts": "yarn generate-simple-chart && yarn generate-possible-paths-chart && yarn generate-possible-paths-paths-chart"
   },
   "dependencies": {},

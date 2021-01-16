@@ -8,15 +8,40 @@ import {
 } from "../machine";
 import {
   deduplicateLinks,
-  Link,
-  REASONS,
-  linksToMermaid,
   filterInvalidLinks,
   getExistingSkippedForkLink,
   sortLinks,
   isGroup,
-  StateLink,
 } from "./utils";
+
+export enum REASONS {
+  ENTRY_DONE = "ENTRY_DONE",
+  FORK_ENTERED = "FORK_ENTERED",
+  FORK_SKIPPED = "FORK_SKIPPED",
+}
+
+export type Group = {
+  type: "group";
+  end: boolean;
+  id: string;
+};
+
+export type StateLink<
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+> = {
+  type: "link";
+  from: StateInternal<Context, Conditions, AdditionalEntryData>;
+  to: StateInternal<Context, Conditions, AdditionalEntryData>;
+  reason: REASONS;
+};
+
+export type Link<
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+> = Group | StateLink<Context, Conditions, AdditionalEntryData>;
 
 /**
  * Takes a list of nested states and generates an array of links between states
@@ -149,114 +174,4 @@ export const generateStateLinks = <
   const sortedLinks = sortLinks(filteredLinks);
 
   return sortedLinks;
-};
-
-type Theme = {
-  darkMode: boolean;
-  background: string;
-  primaryColor: string;
-  secondaryColor: string;
-  tertiaryColor: string;
-  noteBkgColor: string;
-  mainBkg: string;
-  lineColor: string;
-  edgeLabelBackground: string;
-};
-
-export const darkTheme: Theme = {
-  darkMode: true,
-  background: "#000000",
-  primaryColor: "#444444",
-  secondaryColor: "#888888",
-  tertiaryColor: "#111111",
-  noteBkgColor: "transparent",
-  mainBkg: "#222222",
-  lineColor: "#666666",
-  edgeLabelBackground: "transparent",
-};
-
-export const lightTheme: Theme = {
-  darkMode: false,
-  background: "#ffffff",
-  primaryColor: "#aaaaaa",
-  secondaryColor: "#999999",
-  tertiaryColor: "#f8f8f8",
-  noteBkgColor: "transparent",
-  mainBkg: "#eeeeee",
-  lineColor: "#555555",
-  edgeLabelBackground: "transparent",
-};
-
-type Direction = "horizontal" | "vertical";
-
-type Options = {
-  theme?: Theme;
-  direction?: Direction;
-};
-
-export const generateMermaid = <
-  Context,
-  Conditions extends ConditionsMap<Context>,
-  AdditionalEntryData
->(
-  states: State<Context, Conditions, AdditionalEntryData>[],
-  options: Options = {}
-) =>
-  generateMermaidFromStateLinks(
-    generateStateLinks(states) as StateLink<
-      Context,
-      Conditions,
-      AdditionalEntryData
-    >[],
-    options
-  );
-
-export const generateMermaidFromStateLinks = <
-  Context,
-  Conditions extends ConditionsMap<Context>,
-  AdditionalEntryData
->(
-  links: StateLink<Context, Conditions, AdditionalEntryData>[],
-  { theme = darkTheme, direction = "vertical" }: Options = {}
-) => {
-  const mermaidLines = linksToMermaid(links);
-  const themeLine = `%%{init: ${JSON.stringify({
-    theme: "base",
-    themeVariables: theme,
-  })}}%%`;
-
-  const directionMermaid = direction === "horizontal" ? "LR" : "TD";
-
-  return `${themeLine}\ngraph ${directionMermaid}\n${mermaidLines.join("\n")}`;
-};
-
-export const generateMermaidFromPathways = <
-  Context,
-  Conditions extends ConditionsMap<Context>,
-  AdditionalEntryData
->(
-  pathways: StateLink<Context, Conditions, AdditionalEntryData>[][],
-  { theme = darkTheme, direction = "vertical" }: Options = {}
-) => {
-  const mermaidLines = pathways.reduce<string[]>(
-    (prev, links, i) => [
-      ...prev,
-      ...linksToMermaid(
-        links.map((l) => ({
-          ...l,
-          from: { ...l.from, _internalStateId: l.from._internalStateId + i },
-          to: { ...l.to, _internalStateId: l.to._internalStateId + i },
-        }))
-      ),
-    ],
-    []
-  );
-  const themeLine = `%%{init: ${JSON.stringify({
-    theme: "base",
-    themeVariables: theme,
-  })}}%%`;
-
-  const directionMermaid = direction === "horizontal" ? "LR" : "TD";
-
-  return `${themeLine}\ngraph ${directionMermaid}\n${mermaidLines.join("\n")}`;
 };

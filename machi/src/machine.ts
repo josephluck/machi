@@ -1,4 +1,4 @@
-import { toName } from "./graph/utils";
+import { stringifyToId, toName } from "./graph/utils";
 
 export type Predicate<Context> = (context: Context) => boolean;
 
@@ -434,6 +434,3 @@ export const uniquifyStates = <
       )}`,
     } as EntryInternal<Context, Conditions, AdditionalEntryData>;
   });
-
-export const stringifyToId = (str: string) =>
-  str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();

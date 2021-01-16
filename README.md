@@ -366,13 +366,13 @@ yarn install -g ts-node
 Then, you're able to run the generation:
 
 ```bash
-ts-node ./node_modules/@josephluck/machi/src/graph/generate-chart.ts --states ./path/to/my/states.ts --output ./path/to/my/output.svg
+ts-node ./node_modules/@josephluck/machi/src/graph/cli.ts --states ./path/to/my/states.ts --output ./path/to/my/output.svg
 ```
 
 For all the options, run the help script:
 
 ```bash
-ts-node ./node_modules/@josephluck/machi/src/graph/generate-chart.ts --help
+ts-node ./node_modules/@josephluck/machi/src/graph/cli.ts --help
 ```
 
 It's also possible to run the chart generation as a module (by importing `generateChart` from `@josephluck/machi/machi/src/graph/generate-mermaid-chart.ts`). Sometimes it's useful to run the chart generation during tests (using jest or similar).
@@ -445,7 +445,7 @@ export default states;
 Then run the chart generation:
 
 ```bash
-ts-node ./node_modules/@josephluck/machi/machi/src/graph/generate-chart.ts -s possible-paths.ts -o possible-paths
+ts-node ./node_modules/@josephluck/machi/machi/src/graph/cli.ts -s possible-paths.ts -o possible-paths
 ```
 
 Which results in the following chart:
@@ -455,7 +455,7 @@ Which results in the following chart:
 It's also possible to generate a chart that lists all the possible paths to a particular state (by name) by passing the `--paths` option:
 
 ```bash
-ts-node ./node_modules/@josephluck/machi/machi/src/graph/generate-chart.ts -s possible-paths.ts -o possible-paths  --paths="What's your name?"
+ts-node ./node_modules/@josephluck/machi/machi/src/graph/cli.ts -s possible-paths.ts -o possible-paths  --paths="What's your name?"
 ```
 
 Which results in the following chart:
