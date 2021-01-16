@@ -1,3 +1,5 @@
+import { toName } from "./graph/utils";
+
 export type Predicate<Context> = (context: Context) => boolean;
 
 export type ConditionsMap<Context> = Record<string, Condition<Context>>;
@@ -123,8 +125,8 @@ export const makeMachine = <
   const process = (
     context: Context,
     currentEntryName: string | undefined,
-    _states: State<Context, Conditions, AdditionalEntryData>[] = [],
-    history: State<Context, Conditions, AdditionalEntryData>[] = [],
+    _states: StateInternal<Context, Conditions, AdditionalEntryData>[] = [],
+    history: StateInternal<Context, Conditions, AdditionalEntryData>[] = [],
     evaluatedConditions = evaluateConditions(context), // TODO: lazily evaluate conditions when they are encountered for perf, rather than all up front.
     entryInHistory:
       | Entry<Context, Conditions, AdditionalEntryData>
@@ -159,7 +161,7 @@ export const makeMachine = <
           return entryFoundInCurrentLevel;
         }
 
-        const entriesInHistory = history.filter(isEntry);
+        const entriesInHistory = history.filter(isEntryInternal);
         if (currentEntryName && entriesInHistory.length) {
           /**
            * We're trying to find the next closest entry to the entry id passed
@@ -168,13 +170,13 @@ export const makeMachine = <
            * entry in the resultant history.
            */
           const currentIndexInHistory = entriesInHistory.findIndex(
-            (s) => isEntry(s) && s.id === currentEntryName
+            (s) => isEntryInternal(s) && s.id === currentEntryName
           );
           const nextEntryInHistory =
             currentIndexInHistory > -1 &&
             entriesInHistory[currentIndexInHistory + 1];
 
-          if (nextEntryInHistory && isEntry(nextEntryInHistory)) {
+          if (nextEntryInHistory && isEntryInternal(nextEntryInHistory)) {
             return {
               entry: state,
               history,
@@ -227,14 +229,18 @@ export const makeMachine = <
      * INTERNAL USE ONLY
      * The states to evaluate. Used when recursing over states in the machine.
      */
-    _states: State<Context, Conditions, AdditionalEntryData>[] = states,
+    _states: StateInternal<
+      Context,
+      Conditions,
+      AdditionalEntryData
+    >[] = uniquifyStates(states),
     /**
      * INTERNAL USE ONLY
      * Used when recursing over states whose conditions return truthy (aka the
      * states that have been "visited" on the way to the final state) to build
      * up the pathway of visited states during execution.
      */
-    _history: Entry<Context, Conditions, AdditionalEntryData>[] = [],
+    _history: EntryInternal<Context, Conditions, AdditionalEntryData>[] = [],
     /**
      * INTERNAL USE ONLY
      * Used as a cache of the condition results based on the next context so
@@ -286,6 +292,24 @@ export const isEntry = <
   state: State<Context, Conditions, AdditionalEntryData>
 ): state is Entry<Context, Conditions, AdditionalEntryData> => !isFork(state);
 
+export const isForkInternal = <
+  Context extends any,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData extends {} = {}
+>(
+  state: StateInternal<Context, Conditions, AdditionalEntryData>
+): state is ForkInternal<Context, Conditions, AdditionalEntryData> =>
+  isFork(state);
+
+export const isEntryInternal = <
+  Context extends any,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData extends {} = {}
+>(
+  state: StateInternal<Context, Conditions, AdditionalEntryData>
+): state is EntryInternal<Context, Conditions, AdditionalEntryData> =>
+  !isFork(state);
+
 /**
  * Returns a boolean representing whether the provided state is a fork and
  * whether it should be executed according to the current context.
@@ -295,11 +319,11 @@ export const isForkEntered = <
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData extends {} = {}
 >(
-  state: State<Context, Conditions, AdditionalEntryData>,
+  state: StateInternal<Context, Conditions, AdditionalEntryData>,
   context: Context,
   evaluatedConditions: Record<keyof Conditions, boolean>
-): state is Fork<Context, Conditions, AdditionalEntryData> =>
-  isFork<Context, Conditions, AdditionalEntryData>(state) &&
+): state is ForkInternal<Context, Conditions, AdditionalEntryData> =>
+  isForkInternal<Context, Conditions, AdditionalEntryData>(state) &&
   state.requirements.every((condition) =>
     isConditionKey<Conditions, Context>(condition)
       ? evaluatedConditions[condition]
@@ -315,11 +339,11 @@ export const isEntryDone = <
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData extends {} = {}
 >(
-  state: State<Context, Conditions, AdditionalEntryData>,
+  state: StateInternal<Context, Conditions, AdditionalEntryData>,
   context: Context,
   evaluatedConditions: Record<keyof Conditions, boolean>
-): state is Entry<Context, Conditions, AdditionalEntryData> =>
-  isEntry<Context, Conditions, AdditionalEntryData>(state) &&
+): state is EntryInternal<Context, Conditions, AdditionalEntryData> =>
+  isEntryInternal<Context, Conditions, AdditionalEntryData>(state) &&
   state.isDone.every((condition) =>
     isConditionKey<Conditions, Context>(condition)
       ? evaluatedConditions[condition]
@@ -336,11 +360,11 @@ export const isEntryNext = <
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData extends {} = {}
 >(
-  state: State<Context, Conditions, AdditionalEntryData>,
+  state: StateInternal<Context, Conditions, AdditionalEntryData>,
   context: Context,
   evaluatedConditions: Record<keyof Conditions, boolean>
-): state is Entry<Context, Conditions, AdditionalEntryData> =>
-  isEntry<Context, Conditions, AdditionalEntryData>(state) &&
+): state is EntryInternal<Context, Conditions, AdditionalEntryData> =>
+  isEntryInternal<Context, Conditions, AdditionalEntryData>(state) &&
   state.isDone.some((condition) =>
     isConditionKey(condition)
       ? !evaluatedConditions[condition]
@@ -350,3 +374,66 @@ export const isEntryNext = <
 export const isConditionKey = <Conditions, Context>(
   key: keyof Conditions | Predicate<Context>
 ): key is keyof Conditions => typeof key === "string";
+
+export type EntryInternal<
+  Context extends any,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData extends {} = {}
+> = Entry<Context, Conditions, AdditionalEntryData> & {
+  _internalStateId: string;
+};
+
+export type ForkInternal<
+  Context extends any,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData extends {} = {}
+> = Fork<Context, Conditions, AdditionalEntryData> & {
+  states: StateInternal<Context, Conditions, AdditionalEntryData>[];
+  _internalStateId: string;
+};
+
+export type StateInternal<
+  Context extends any,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData extends {} = {}
+> =
+  | EntryInternal<Context, Conditions, AdditionalEntryData>
+  | ForkInternal<Context, Conditions, AdditionalEntryData>;
+
+/**
+ * Takes a (potentially) deeply nested set of states and returns a copy of them
+ * with unique ids.
+ *
+ * This allows the same entry to be used within multiple forks without needing
+ * to have unique ids.
+ */
+export const uniquifyStates = <
+  Context extends any,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData extends {} = {}
+>(
+  states: State<Context, Conditions, AdditionalEntryData>[],
+  i = 1
+): StateInternal<Context, Conditions, AdditionalEntryData>[] =>
+  states.map((state) => {
+    if (isFork(state)) {
+      return {
+        ...state,
+        states: uniquifyStates(state.states, i + 1),
+        _internalStateId: `${i}-${stringifyToId(
+          toName(
+            state as ForkInternal<Context, Conditions, AdditionalEntryData>
+          )
+        )}`,
+      } as ForkInternal<Context, Conditions, AdditionalEntryData>;
+    }
+    return {
+      ...state,
+      _internalStateId: `${i}-${stringifyToId(
+        toName(state as EntryInternal<Context, Conditions, AdditionalEntryData>)
+      )}`,
+    } as EntryInternal<Context, Conditions, AdditionalEntryData>;
+  });
+
+export const stringifyToId = (str: string) =>
+  str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();

@@ -1,11 +1,11 @@
 import {
-  State,
-  isFork,
-  isEntry,
-  Fork,
+  isForkInternal,
+  isEntryInternal,
   isConditionKey,
   Predicate,
   ConditionsMap,
+  StateInternal,
+  ForkInternal,
 } from "../machine";
 
 export enum REASONS {
@@ -20,20 +20,14 @@ type Group = {
   id: string;
 };
 
-export type StateLinkNode<
-  Context,
-  Conditions extends ConditionsMap<Context>,
-  AdditionalEntryData
-> = { _machiChartId: string } & State<Context, Conditions, AdditionalEntryData>;
-
 export type StateLink<
   Context,
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 > = {
   type: "link";
-  from: StateLinkNode<Context, Conditions, AdditionalEntryData>;
-  to: StateLinkNode<Context, Conditions, AdditionalEntryData>;
+  from: StateInternal<Context, Conditions, AdditionalEntryData>;
+  to: StateInternal<Context, Conditions, AdditionalEntryData>;
   reason: REASONS;
 };
 
@@ -58,9 +52,9 @@ export const linksToMermaid = <
       return [...prev, line];
     }
 
-    if (isFork(link.from)) {
-      const fromId = link.from._machiChartId;
-      const toId = link.to._machiChartId;
+    if (isForkInternal(link.from)) {
+      const fromId = link.from._internalStateId;
+      const toId = link.to._internalStateId;
       const isAre = link.from.requirements.length > 1 ? "are" : "is";
       const truthy =
         link.reason === REASONS.FORK_ENTERED
@@ -73,28 +67,32 @@ export const linksToMermaid = <
         " and "
       )} ${isAre} ${truthy}|`;
 
-      if (isEntry(link.to)) {
-        const line = `${fromId} ${arrow} ${reqs} ${toId}[${link.to.id}]`;
+      if (isEntryInternal(link.to)) {
+        const line = `${fromId}{${toName(
+          link.from
+        )}} ${arrow} ${reqs} ${toId}[${link.to.id}]`;
         return [...prev, line];
       }
-      if (isFork(link.to)) {
-        const line = `${fromId} ${arrow} ${reqs} ${toId}{${link.to!.fork}}`;
+      if (isForkInternal(link.to)) {
+        const line = `${fromId}{${toName(
+          link.from
+        )}} ${arrow} ${reqs} ${toId}{${link.to!.fork}}`;
         return [...prev, line];
       }
       return prev;
     }
 
-    const fromId = link.from._machiChartId;
-    const toId = link.to._machiChartId;
+    const fromId = link.from._internalStateId;
+    const toId = link.to._internalStateId;
     const isAre = link.from.isDone.length > 1 ? "are" : "is";
-    if (isEntry(link.to)) {
+    if (isEntryInternal(link.to)) {
       const reqs = `|${condNames(link.from.isDone as string[]).join(
         " and "
       )} ${isAre} true|`;
       const line = `${fromId}[${link.from.id}] --> ${reqs} ${toId}[${link.to.id}]`;
       return [...prev, line];
     }
-    if (isFork(link.to)) {
+    if (isForkInternal(link.to)) {
       const reqs = `|${condNames(link.from.isDone as string[]).join(
         " and "
       )} ${isAre} true|`;
@@ -111,26 +109,13 @@ export const condNames = (conditions: (string | Predicate<any>)[]) =>
     isConditionKey(cond) ? cond : cond.name || "unknown"
   );
 
-export const makeId = <
-  Context,
-  Conditions extends ConditionsMap<Context>,
-  AdditionalEntryData
->(
-  state: State<Context, Conditions, AdditionalEntryData> | undefined
-) =>
-  !state
-    ? "undefined"
-    : isFork(state)
-    ? stringifyToId(state.fork)
-    : stringifyToId(state.id);
-
 export const toName = <
   Context,
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
-  state: State<Context, Conditions, AdditionalEntryData> | undefined
-) => (!state ? "undefined" : isFork(state) ? state.fork : state.id);
+  state: StateInternal<Context, Conditions, AdditionalEntryData> | undefined
+) => (!state ? "undefined" : isForkInternal(state) ? state.fork : state.id);
 
 export const stringifyToId = (str: string) =>
   str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
@@ -149,16 +134,16 @@ export const getExistingSkippedForkLink = <
   AdditionalEntryData
 >(
   result: Link<Context, Conditions, AdditionalEntryData>[],
-  from: Fork<Context, Conditions, AdditionalEntryData>,
-  to: State<Context, Conditions, AdditionalEntryData>
+  from: ForkInternal<Context, Conditions, AdditionalEntryData>,
+  to: StateInternal<Context, Conditions, AdditionalEntryData>
 ): Link<Context, Conditions, AdditionalEntryData> | undefined =>
   result.find(
     (link) =>
       !isGroup(link) &&
       link.reason === REASONS.FORK_SKIPPED &&
-      isFork(from) &&
-      makeId(link.from) === makeId(from) &&
-      makeId(link.to) === makeId(to)
+      isForkInternal(from) &&
+      link.from._internalStateId === from._internalStateId &&
+      link.to._internalStateId === to._internalStateId
   );
 
 /**
@@ -173,7 +158,10 @@ export const deduplicateLinks = <
   result: Link<Context, Conditions, AdditionalEntryData>[]
 ): Link<Context, Conditions, AdditionalEntryData>[] =>
   result
-    .filter((link) => isGroup(link) || makeId(link.from) !== makeId(link.to))
+    .filter(
+      (link) =>
+        isGroup(link) || link.from._internalStateId !== link.to._internalStateId
+    )
     .filter(
       (link, i: number, acc) =>
         isGroup(link) ||
@@ -192,25 +180,25 @@ export const areStatesIdentical = <
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
-  stateA: State<Context, Conditions, AdditionalEntryData>,
-  stateB: State<Context, Conditions, AdditionalEntryData>
+  stateA: StateInternal<Context, Conditions, AdditionalEntryData>,
+  stateB: StateInternal<Context, Conditions, AdditionalEntryData>
 ) => {
-  if (isFork(stateA) && isEntry(stateB)) {
+  if (isForkInternal(stateA) && isEntryInternal(stateB)) {
     return false;
   }
-  if (isEntry(stateA) && isFork(stateB)) {
+  if (isEntryInternal(stateA) && isForkInternal(stateB)) {
     return false;
   }
-  if (makeId(stateA) !== makeId(stateB)) {
+  if (stateA._internalStateId !== stateB._internalStateId) {
     return false;
   }
-  if (isFork(stateA) && isFork(stateB)) {
+  if (isForkInternal(stateA) && isForkInternal(stateB)) {
     return (
       condNames(stateA.requirements as string[]).join("") ===
       condNames(stateB.requirements as string[]).join("")
     );
   }
-  if (isEntry(stateA) && isEntry(stateB)) {
+  if (isEntryInternal(stateA) && isEntryInternal(stateB)) {
     return (
       condNames(stateA.isDone as string[]).join("") ===
       condNames(stateB.isDone as string[]).join("")
@@ -224,16 +212,16 @@ export const filterInvalidLinks = <
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
-  states: State<Context, Conditions, AdditionalEntryData>[],
+  states: StateInternal<Context, Conditions, AdditionalEntryData>[],
   result: Link<Context, Conditions, AdditionalEntryData>[]
 ): Link<Context, Conditions, AdditionalEntryData>[] => {
-  const orderedIds = accumulateStates(states).map(makeId);
+  const orderedIds = accumulateStates(states).map((s) => s._internalStateId);
   return result.filter((link) => {
     if (isGroup(link)) {
       return true;
     }
-    const fromIndex = orderedIds.indexOf(makeId(link.from));
-    const toIndex = orderedIds.indexOf(makeId(link.to));
+    const fromIndex = orderedIds.indexOf(link.from._internalStateId);
+    const toIndex = orderedIds.indexOf(link.to._internalStateId);
     return fromIndex >= 0 && toIndex >= 0 && fromIndex < toIndex;
   });
 };
@@ -247,14 +235,14 @@ export const accumulateStates = <
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
 >(
-  states: State<Context, Conditions, AdditionalEntryData>[]
-): State<Context, Conditions, AdditionalEntryData>[] =>
+  states: StateInternal<Context, Conditions, AdditionalEntryData>[]
+): StateInternal<Context, Conditions, AdditionalEntryData>[] =>
   states.reduce(
     (acc, state) =>
-      isFork(state)
+      isForkInternal(state)
         ? [...acc, state, ...accumulateStates(state.states)]
         : [...acc, state],
-    [] as State<Context, Conditions, AdditionalEntryData>[]
+    [] as StateInternal<Context, Conditions, AdditionalEntryData>[]
   );
 
 export const isGroup = <
@@ -277,7 +265,7 @@ export const sortLinks = <
       !isGroup(linkA) &&
       !isGroup(linkB) &&
       linkA.reason === REASONS.FORK_SKIPPED &&
-      makeId(linkA.from) === makeId(linkB.from)
+      linkA.from._internalStateId === linkB.from._internalStateId
     ) {
       return 2;
     }

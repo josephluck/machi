@@ -1,6 +1,5 @@
 import {
   generateChart,
-  generateChartFromLinks,
   generateChartFromPathways,
 } from "./graph/generate-mermaid-chart";
 import { State } from "./machine";
@@ -220,6 +219,114 @@ describe("Generates possible paths through a machine that uses skipped forks", (
         ["E1", "F1", "E2"],
         ["E1", "F1"],
       ])
+    );
+  });
+
+  it("generates a single chart for all possible pathways", async () => {
+    const result = getPathwaysToState("E3", states);
+    await generateChartFromPathways(
+      {
+        output: `../screenshots/tests/pathways-machine-2-mapped-result-combined`,
+      },
+      result
+    );
+  });
+});
+
+describe("Generates possible paths through a machine that uses shared states", () => {
+  const states: State<{}, {}, {}>[] = [
+    {
+      id: "E1",
+      isDone: [
+        function E1IsDone() {
+          return true;
+        },
+      ],
+    },
+    {
+      fork: "F1",
+      requirements: [
+        function F1IsTrue() {
+          return true;
+        },
+      ],
+      states: [
+        {
+          id: "E2",
+          isDone: [
+            function E2IsDone() {
+              return true;
+            },
+          ],
+        },
+        {
+          fork: "F3",
+          requirements: [
+            function F3IsTrue() {
+              return true;
+            },
+          ],
+          states: [
+            {
+              id: "E3",
+              isDone: [
+                function E3IsTrue() {
+                  return true;
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "E3",
+      isDone: [
+        function E3IsDone() {
+          return true;
+        },
+      ],
+    },
+  ];
+
+  it("generates the chart (for debugging purposes)", async () => {
+    await generateChart(
+      { output: "../screenshots/tests/pathways-machine-3" },
+      states
+    );
+  });
+
+  it("gets possible paths to F1", () => {
+    const result = getPathwaysToState("F1", states);
+    expect(result.map(extractFromNamesFromLinks)).toEqual(
+      expect.arrayContaining([["E1"]])
+    );
+  });
+
+  it("gets possible paths to E2", () => {
+    const result = getPathwaysToState("E2", states);
+    expect(result.map(extractFromNamesFromLinks)).toEqual(
+      expect.arrayContaining([["E1", "F1"]])
+    );
+  });
+
+  it("gets possible paths to E3", () => {
+    const result = getPathwaysToState("E3", states);
+    expect(result.map(extractFromNamesFromLinks)).toEqual(
+      expect.arrayContaining([
+        ["E1", "F1", "E2"],
+        ["E1", "F1"],
+      ])
+    );
+  });
+
+  it("generates a single chart for all possible pathways", async () => {
+    const result = getPathwaysToState("E3", states);
+    await generateChartFromPathways(
+      {
+        output: `../screenshots/tests/pathways-machine-3-mapped-result-combined`,
+      },
+      result
     );
   });
 });

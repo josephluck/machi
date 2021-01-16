@@ -1,4 +1,4 @@
-import { makeMachine, Entry, isEntry, State } from "./machine";
+import { makeMachine, Entry, isEntryInternal, State, isEntry } from "./machine";
 
 describe("auth flow", () => {
   type Context = {

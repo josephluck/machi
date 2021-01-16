@@ -1,6 +1,6 @@
 import { generateStateLinks } from "./graph/generate-state-links";
 import { StateLink } from "./graph/utils";
-import { ConditionsMap, isFork, State } from "./machine";
+import { ConditionsMap, isForkInternal, State } from "./machine";
 
 const pathways = <
   Context,
@@ -11,16 +11,20 @@ const pathways = <
   states: State<Context, Conditions, AdditionalEntryData>[],
   links = generateStateLinks(states).filter(
     (link) => link.type === "link"
-  ) as StateLink<Context, Conditions, AdditionalEntryData>[]
+  ) as StateLink<Context, Conditions, AdditionalEntryData>[],
+  toId?: string
 ): StateLink<Context, Conditions, AdditionalEntryData>[][] => {
-  const branches = findLinksToState(toName, links);
-
-  if (branches.length === 0) {
-    return [];
-  }
+  const branches = toId
+    ? findLinksToStateById(toId, links)
+    : findLinksToStateByName(toName, links);
 
   return branches.map((branch) => {
-    const ways = pathways(extractFromNameFromLink(branch), states);
+    const ways = pathways(
+      extractFromNameFromLink(branch),
+      states,
+      links,
+      extractFromInternalIdFromLink(branch)
+    );
 
     if (ways.length) {
       return ways.reduce((acc, way) => [...way, ...acc, branch], []);
@@ -40,7 +44,7 @@ export const getPathwaysToState = <
 ): StateLink<Context, Conditions, AdditionalEntryData>[][] =>
   pathways(toName, states).sort((a, b) => a.length - b.length);
 
-const findLinksToState = <
+const findLinksToStateByName = <
   Context,
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData
@@ -49,8 +53,18 @@ const findLinksToState = <
   links: StateLink<Context, Conditions, AdditionalEntryData>[]
 ): StateLink<Context, Conditions, AdditionalEntryData>[] =>
   links.filter((link) =>
-    isFork(link.to) ? link.to.fork === name : link.to.id === name
+    isForkInternal(link.to) ? link.to.fork === name : link.to.id === name
   );
+
+const findLinksToStateById = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  id: string,
+  links: StateLink<Context, Conditions, AdditionalEntryData>[]
+): StateLink<Context, Conditions, AdditionalEntryData>[] =>
+  links.filter((link) => link.to._internalStateId === id);
 
 export const extractFromNamesFromLinks = <
   Context,
@@ -67,4 +81,16 @@ const extractFromNameFromLink = <
 >(
   link: StateLink<Context, Conditions, AdditionalEntryData>
 ): string =>
-  isFork(link.from) ? link.from.fork : link.from ? link.from.id : "unknown";
+  isForkInternal(link.from)
+    ? link.from.fork
+    : link.from
+    ? link.from.id
+    : "unknown";
+
+const extractFromInternalIdFromLink = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  link: StateLink<Context, Conditions, AdditionalEntryData>
+): string => link.from._internalStateId || "unknown";

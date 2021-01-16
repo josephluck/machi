@@ -1,16 +1,21 @@
-import { ConditionsMap, isEntry, isFork, State } from "../machine";
+import {
+  ConditionsMap,
+  isEntryInternal,
+  isForkInternal,
+  State,
+  StateInternal,
+  uniquifyStates,
+} from "../machine";
 import {
   deduplicateLinks,
   Link,
   REASONS,
   linksToMermaid,
   filterInvalidLinks,
-  makeId,
   getExistingSkippedForkLink,
   sortLinks,
   isGroup,
   StateLink,
-  StateLinkNode,
 } from "./utils";
 
 /**
@@ -28,13 +33,17 @@ export const generateStateLinks = <
   const result: Link<Context, Conditions, AdditionalEntryData>[] = [];
 
   const run = (
-    _states: typeof states,
+    _states: StateInternal<Context, Conditions, AdditionalEntryData>[],
     /**
      * Keeps track of the parent's next state when a fork is entered, so all of
      * the final entries in the fork (and the nested forks) will successfully
      * link to the next logical state back up the tree.
      */
-    nextStateInParentLevel?: State<Context, Conditions, AdditionalEntryData>
+    nextStateInParentLevel?: StateInternal<
+      Context,
+      Conditions,
+      AdditionalEntryData
+    >
   ) => {
     _states.forEach((state, i) => {
       const nextState = _states.find(
@@ -44,13 +53,13 @@ export const generateStateLinks = <
          * sibling forks of the same id, their requirements should always be
          * mutually exclusive)
          */
-        (s, ix) => ix > i && makeId(s) !== makeId(state)
+        (s, ix) => ix > i && s._internalStateId !== state._internalStateId
       );
-      if (isFork(state)) {
+      if (isForkInternal(state)) {
         result.push({
           type: "link",
-          from: generateMachiStateNodeId(state),
-          to: generateMachiStateNodeId(state.states[0]),
+          from: state,
+          to: state.states[0],
           reason: REASONS.FORK_ENTERED,
         });
         if (state.chartGroup) {
@@ -72,7 +81,7 @@ export const generateStateLinks = <
           });
         }
         if (nextState || nextStateInParentLevel) {
-          const toState: State<
+          const toState: StateInternal<
             Context,
             Conditions,
             AdditionalEntryData
@@ -92,10 +101,10 @@ export const generateStateLinks = <
             result.forEach((link) => {
               if (
                 !isGroup(link) &&
-                makeId(link.from) === makeId(state) &&
-                makeId(link.to) === makeId(toState) &&
+                link.from._internalStateId === state._internalStateId &&
+                link.to._internalStateId === toState._internalStateId &&
                 link.reason === REASONS.FORK_SKIPPED &&
-                isFork(link.from)
+                isForkInternal(link.from)
               ) {
                 // Make a deep(ish) copy of the state so we don't inadvertently
                 // change the fork's entry links requirements
@@ -111,24 +120,19 @@ export const generateStateLinks = <
           } else if (toState) {
             result.push({
               type: "link",
-              from: generateMachiStateNodeId(state),
-              to: generateMachiStateNodeId(toState),
+              from: state,
+              to: toState,
               reason: REASONS.FORK_SKIPPED,
             });
           }
         }
       }
-      if (isEntry(state) && state.isDone.length > 0) {
+      if (isEntryInternal(state) && state.isDone.length > 0) {
         if (nextState || nextStateInParentLevel) {
-          const s: State<
-            Context,
-            Conditions,
-            AdditionalEntryData
-          > = (nextState || nextStateInParentLevel)!;
           result.push({
             type: "link",
-            from: generateMachiStateNodeId(state),
-            to: generateMachiStateNodeId(s),
+            from: state,
+            to: (nextState || nextStateInParentLevel)!,
             reason: REASONS.ENTRY_DONE,
           });
         }
@@ -136,10 +140,12 @@ export const generateStateLinks = <
     });
   };
 
-  run(states);
+  const uniquedStates = uniquifyStates(states);
+
+  run(uniquedStates);
 
   const deduplicatedResult = deduplicateLinks(result);
-  const filteredLinks = filterInvalidLinks(states, deduplicatedResult);
+  const filteredLinks = filterInvalidLinks(uniquedStates, deduplicatedResult);
   const sortedLinks = sortLinks(filteredLinks);
 
   return sortedLinks;
@@ -236,10 +242,10 @@ export const generateMermaidFromPathways = <
     (prev, links, i) => [
       ...prev,
       ...linksToMermaid(
-        links.map((link) => ({
-          ...link,
-          from: appendToId(i.toString(), link.from),
-          to: appendToId(i.toString(), link.to),
+        links.map((l) => ({
+          ...l,
+          from: { ...l.from, _internalStateId: l.from._internalStateId + i },
+          to: { ...l.to, _internalStateId: l.to._internalStateId + i },
         }))
       ),
     ],
@@ -254,26 +260,3 @@ export const generateMermaidFromPathways = <
 
   return `${themeLine}\ngraph ${directionMermaid}\n${mermaidLines.join("\n")}`;
 };
-
-const appendToId = <
-  Context,
-  Conditions extends ConditionsMap<Context>,
-  AdditionalEntryData
->(
-  str: string,
-  state: StateLinkNode<Context, Conditions, AdditionalEntryData>
-): StateLinkNode<Context, Conditions, AdditionalEntryData> => ({
-  ...state,
-  _machiChartId: `${state._machiChartId}${str}`,
-});
-
-export const generateMachiStateNodeId = <
-  Context,
-  Conditions extends ConditionsMap<Context>,
-  AdditionalEntryData
->(
-  state: State<Context, Conditions, AdditionalEntryData>
-): StateLinkNode<Context, Conditions, AdditionalEntryData> => ({
-  ...state,
-  _machiChartId: makeId(state),
-});
