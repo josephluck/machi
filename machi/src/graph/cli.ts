@@ -13,7 +13,7 @@ import {
   supportedExtensions,
   Theme,
 } from "./files";
-import { getPathwaysToState } from "../pathways";
+import { getPathwaysToState } from "../pathways/pathways";
 
 const spinner = makeSpinner();
 

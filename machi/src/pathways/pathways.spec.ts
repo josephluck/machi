@@ -1,6 +1,6 @@
-import { generateChart, generateChartFromPathways } from "./graph/files";
-import { StateLink } from "./graph/generate-state-links";
-import { ConditionsMap, isForkInternal, State } from "./machine";
+import { generateChart, generateChartFromPathways } from "../graph/files";
+import { StateLink } from "../graph/generate-state-links";
+import { ConditionsMap, isForkInternal, State } from "../machine";
 import { getPathwaysToState } from "./pathways";
 
 /**
