@@ -1,9 +1,7 @@
-import {
-  generateChart,
-  generateChartFromPathways,
-} from "./graph/generate-mermaid-chart";
-import { State } from "./machine";
-import { extractFromNamesFromLinks, getPathwaysToState } from "./pathways";
+import { generateChart, generateChartFromPathways } from "./graph/files";
+import { StateLink } from "./graph/generate-state-links";
+import { ConditionsMap, isForkInternal, State } from "./machine";
+import { getPathwaysToState } from "./pathways";
 
 /**
  * It's worthwhile looking at the generated charts in screenshots/tests/ to see
@@ -233,7 +231,7 @@ describe("Generates possible paths through a machine that uses skipped forks", (
   });
 });
 
-describe("Generates possible paths through a machine that uses shared states", () => {
+describe("Generates possible paths through a machine that uses duplicate entry names", () => {
   const states: State<{}, {}, {}>[] = [
     {
       id: "E1",
@@ -296,26 +294,14 @@ describe("Generates possible paths through a machine that uses shared states", (
     );
   });
 
-  it("gets possible paths to F1", () => {
-    const result = getPathwaysToState("F1", states);
-    expect(result.map(extractFromNamesFromLinks)).toEqual(
-      expect.arrayContaining([["E1"]])
-    );
-  });
-
-  it("gets possible paths to E2", () => {
-    const result = getPathwaysToState("E2", states);
-    expect(result.map(extractFromNamesFromLinks)).toEqual(
-      expect.arrayContaining([["E1", "F1"]])
-    );
-  });
-
   it("gets possible paths to E3", () => {
     const result = getPathwaysToState("E3", states);
     expect(result.map(extractFromNamesFromLinks)).toEqual(
       expect.arrayContaining([
-        ["E1", "F1", "E2"],
         ["E1", "F1"],
+        ["E1", "F1", "E2", "F3"],
+        ["E1", "F1", "E2", "F3"],
+        ["E1", "F1", "E2", "F3", "E3"],
       ])
     );
   });
@@ -330,3 +316,92 @@ describe("Generates possible paths through a machine that uses shared states", (
     );
   });
 });
+
+describe("Generates possible paths through a machine that has sibling forks", () => {
+  const states: State<{}, {}, {}>[] = [
+    {
+      fork: "F1",
+      requirements: [
+        function F1IsTrue() {
+          return true;
+        },
+      ],
+      states: [
+        {
+          id: "E1",
+          isDone: [
+            function E1IsDone() {
+              return true;
+            },
+          ],
+        },
+      ],
+    },
+    {
+      fork: "F2",
+      requirements: [
+        function F2IsTrue() {
+          return true;
+        },
+      ],
+      states: [
+        {
+          id: "E2",
+          isDone: [
+            function E2IsDone() {
+              return true;
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  it("generates all possible paths to E2", () => {
+    const result = getPathwaysToState("E2", states);
+    expect(result.map(extractFromNamesFromLinks)).toEqual(
+      expect.arrayContaining([
+        ["F1", "F2"],
+        ["F1", "E1", "F2"],
+      ])
+    );
+  });
+
+  it("generates the chart (for debugging purposes)", async () => {
+    await generateChart(
+      { output: "../screenshots/tests/pathways-machine-4" },
+      states
+    );
+  });
+
+  it("generates a single chart for all possible pathways", async () => {
+    const result = getPathwaysToState("E2", states);
+    await generateChartFromPathways(
+      {
+        output: `../screenshots/tests/pathways-machine-4-mapped-result-combined`,
+      },
+      result
+    );
+  });
+});
+
+export const extractFromNamesFromLinks = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  links: StateLink<Context, Conditions, AdditionalEntryData>[]
+): string[] => links.map(extractFromNameFromLink);
+
+const extractFromNameFromLink = <
+  Context,
+  Conditions extends ConditionsMap<Context>,
+  AdditionalEntryData
+>(
+  link: StateLink<Context, Conditions, AdditionalEntryData>
+): string =>
+  isForkInternal(link.from)
+    ? link.from.fork
+    : link.from
+    ? link.from.id
+    : "unknown";

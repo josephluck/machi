@@ -413,24 +413,24 @@ export const uniquifyStates = <
   AdditionalEntryData extends {} = {}
 >(
   states: State<Context, Conditions, AdditionalEntryData>[],
-  i = 1
+  parentId = ""
 ): StateInternal<Context, Conditions, AdditionalEntryData>[] =>
   states.map((state) => {
     if (isFork(state)) {
+      const _internalStateId = `${stringifyToId(
+        toName(state as ForkInternal<Context, Conditions, AdditionalEntryData>)
+      )}${parentId}`;
       return {
         ...state,
-        states: uniquifyStates(state.states, i + 1),
-        _internalStateId: `${i}-${stringifyToId(
-          toName(
-            state as ForkInternal<Context, Conditions, AdditionalEntryData>
-          )
-        )}`,
+        states: uniquifyStates(state.states, _internalStateId),
+        _internalStateId,
       } as ForkInternal<Context, Conditions, AdditionalEntryData>;
     }
+    const _internalStateId = `${stringifyToId(
+      toName(state as EntryInternal<Context, Conditions, AdditionalEntryData>)
+    )}${parentId}`;
     return {
       ...state,
-      _internalStateId: `${i}-${stringifyToId(
-        toName(state as EntryInternal<Context, Conditions, AdditionalEntryData>)
-      )}`,
+      _internalStateId,
     } as EntryInternal<Context, Conditions, AdditionalEntryData>;
   });
