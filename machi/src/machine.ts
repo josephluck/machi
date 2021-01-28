@@ -299,7 +299,7 @@ export const isForkInternal = <
 >(
   state: StateInternal<Context, Conditions, AdditionalEntryData>
 ): state is ForkInternal<Context, Conditions, AdditionalEntryData> =>
-  isFork(state);
+  isFork(state as Fork<Context, Conditions, AdditionalEntryData>);
 
 export const isEntryInternal = <
   Context extends any,
@@ -308,7 +308,7 @@ export const isEntryInternal = <
 >(
   state: StateInternal<Context, Conditions, AdditionalEntryData>
 ): state is EntryInternal<Context, Conditions, AdditionalEntryData> =>
-  !isFork(state);
+  !isFork(state as Fork<Context, Conditions, AdditionalEntryData>);
 
 /**
  * Returns a boolean representing whether the provided state is a fork and
@@ -387,9 +387,10 @@ export type ForkInternal<
   Context extends any,
   Conditions extends ConditionsMap<Context>,
   AdditionalEntryData extends {} = {}
-> = Fork<Context, Conditions, AdditionalEntryData> & {
+> = Omit<Fork<Context, Conditions, AdditionalEntryData>, "states"> & {
   states: StateInternal<Context, Conditions, AdditionalEntryData>[];
   _internalStateId: string;
+  _internalVariantId: string;
 };
 
 export type StateInternal<
@@ -415,7 +416,7 @@ export const uniquifyStates = <
   states: State<Context, Conditions, AdditionalEntryData>[],
   parentId = ""
 ): StateInternal<Context, Conditions, AdditionalEntryData>[] =>
-  states.map((state) => {
+  states.map((state, ix) => {
     if (isFork(state)) {
       const _internalStateId = `${stringifyToId(
         toName(state as ForkInternal<Context, Conditions, AdditionalEntryData>)
@@ -424,6 +425,7 @@ export const uniquifyStates = <
         ...state,
         states: uniquifyStates(state.states, _internalStateId),
         _internalStateId,
+        _internalVariantId: ix.toString(),
       } as ForkInternal<Context, Conditions, AdditionalEntryData>;
     }
     const _internalStateId = `${stringifyToId(

@@ -3,6 +3,7 @@
   "private": "true",
   "workspaces": [
     "machi",
+    "visualiser",
     "examples/*"
   ],
   "scripts": {

@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import Mermaid from "react-mermaid2";
 
-import { generateMermaid } from "@josephluck/machi/src/graph/generate-state-links";
+import { generateMermaid } from "@josephluck/machi/src/graph/generate-mermaid-string";
 
 import { states } from "./states";
 
